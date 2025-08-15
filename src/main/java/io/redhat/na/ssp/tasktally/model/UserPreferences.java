@@ -1,12 +1,13 @@
 package io.redhat.na.ssp.tasktally.model;
 
-import io.redhat.na.ssp.tasktally.util.JsonMapConverter;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "user_preferences")
@@ -20,8 +21,8 @@ public class UserPreferences extends PanacheEntityBase {
   @NotBlank
   public String userId;
 
-  @Convert(converter = JsonMapConverter.class)
-  @Column(name = "ui", nullable = false)
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "ui", nullable = false, columnDefinition = "jsonb")
   public Map<String, Object> ui = new HashMap<>();
 
   @Column(name = "default_git_provider")
