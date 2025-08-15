@@ -35,4 +35,11 @@ public class CredentialRef extends PanacheEntityBase {
 
   @Column(name = "created_at")
   public Instant createdAt;
+
+    @PrePersist
+    public void prePersist() {
+      if (createdAt == null) {
+        createdAt = Instant.now();
+      }
+    }
 }
