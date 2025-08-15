@@ -44,6 +44,10 @@
       <artifactId>quarkus-hibernate-orm</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-flyway</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.quarkiverse.jgit</groupId>
       <artifactId>quarkus-jgit</artifactId>
       <version>3.6.0</version>
@@ -117,6 +121,11 @@
       <artifactId>testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>jdbc</artifactId>
+        <scope>test</scope>
+      </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
@@ -162,6 +171,7 @@
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
             <maven.home>${maven.home}</maven.home>
+            <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -181,6 +191,7 @@
             <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
             <maven.home>${maven.home}</maven.home>
+            <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
           </systemPropertyVariables>
         </configuration>
       </plugin>

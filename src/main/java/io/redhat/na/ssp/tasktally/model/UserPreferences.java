@@ -21,7 +21,7 @@ public class UserPreferences extends PanacheEntityBase {
   public String userId;
 
   @Convert(converter = JsonMapConverter.class)
-  @Column(columnDefinition = "jsonb", nullable = false)
+  @Column(name = "ui", nullable = false)
   public Map<String, Object> ui = new HashMap<>();
 
   @Column(name = "default_git_provider")

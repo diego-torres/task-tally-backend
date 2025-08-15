@@ -5,6 +5,9 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+
+import jakarta.enterprise.context.ApplicationScoped;
+
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
@@ -12,6 +15,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 
+@ApplicationScoped
 public class GitHubAppJwtBuilder {
   public String buildJwt(String appId, String privateKeyPem) {
     try {

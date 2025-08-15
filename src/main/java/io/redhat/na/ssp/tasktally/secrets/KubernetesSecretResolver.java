@@ -1,6 +1,7 @@
 package io.redhat.na.ssp.tasktally.secrets;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.arc.Unremovable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,6 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @ApplicationScoped
+@Unremovable
 public class KubernetesSecretResolver implements SecretResolver {
   private static final Pattern REF = Pattern.compile("k8s:secret/([^#]+)#(.+)");
 
