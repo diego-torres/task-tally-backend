@@ -12,25 +12,25 @@ import org.yaml.snakeyaml.Yaml;
 @ApplicationScoped
 public class TemplateService {
 
-    @Inject
-    PreferencesService preferencesService;
+  @Inject
+  PreferencesService preferencesService;
 
-    @Inject
-    GitCredentialProvider credentialProvider;
+  @Inject
+  GitCredentialProvider credentialProvider;
 
-    @Inject
-    GitHubClient gitHubClient;
+  @Inject
+  GitHubClient gitHubClient;
 
-    private final Yaml yaml = new Yaml();
+  private final Yaml yaml = new Yaml();
 
-    public List<ProjectTemplate> pullTemplates(String userId, TemplatePullRequest req) {
-        CredentialRef cred = preferencesService.findCredential(userId, req.credentialName);
-        String token = credentialProvider.provideToken(cred);
-        Map<String, String> files = gitHubClient.getYamlFiles(req.owner, req.repo, req.path, req.branch, token);
-        List<ProjectTemplate> templates = new ArrayList<>();
-        for (String content : files.values()) {
-            templates.add(yaml.loadAs(content, ProjectTemplate.class));
-        }
-        return templates;
+  public List<ProjectTemplate> pullTemplates(String userId, TemplatePullRequest req) {
+    CredentialRef cred = preferencesService.findCredential(userId, req.credentialName);
+    String token = credentialProvider.provideToken(cred);
+    Map<String, String> files = gitHubClient.getYamlFiles(req.owner, req.repo, req.path, req.branch, token);
+    List<ProjectTemplate> templates = new ArrayList<>();
+    for (String content : files.values()) {
+      templates.add(yaml.loadAs(content, ProjectTemplate.class));
     }
+    return templates;
+  }
 }

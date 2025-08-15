@@ -12,27 +12,27 @@ import java.util.Map;
 @Table(name = "user_preferences")
 public class UserPreferences extends PanacheEntityBase {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  public Long id;
 
-    @Column(name = "user_id", nullable = false, unique = true)
-    @NotBlank
-    public String userId;
+  @Column(name = "user_id", nullable = false, unique = true)
+  @NotBlank
+  public String userId;
 
-    @Convert(converter = JsonMapConverter.class)
-    @Column(columnDefinition = "jsonb", nullable = false)
-    public Map<String, Object> ui = new HashMap<>();
+  @Convert(converter = JsonMapConverter.class)
+  @Column(columnDefinition = "jsonb", nullable = false)
+  public Map<String, Object> ui = new HashMap<>();
 
-    @Column(name = "default_git_provider")
-    public String defaultGitProvider;
+  @Column(name = "default_git_provider")
+  public String defaultGitProvider;
 
-    @Version
-    public Integer version;
+  @Version
+  public Integer version;
 
-    @Column(name = "created_at")
-    public Instant createdAt;
+  @Column(name = "created_at")
+  public Instant createdAt;
 
-    @Column(name = "updated_at")
-    public Instant updatedAt;
+  @Column(name = "updated_at")
+  public Instant updatedAt;
 }

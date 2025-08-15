@@ -9,7 +9,7 @@ import java.util.Optional;
 @ApplicationScoped
 public class UserPreferencesRepository implements PanacheRepository<UserPreferences> {
 
-    public Optional<UserPreferences> findByUserId(String userId) {
-        return find("userId", userId).firstResultOptional();
-    }
+  public Optional<UserPreferences> findByUserId(String userId) {
+    return find("userId", userId).firstResultOptional();
+  }
 }

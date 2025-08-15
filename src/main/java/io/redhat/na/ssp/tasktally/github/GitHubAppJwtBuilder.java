@@ -13,26 +13,26 @@ import java.time.Instant;
 import java.util.Base64;
 
 public class GitHubAppJwtBuilder {
-    public String buildJwt(String appId, String privateKeyPem) {
-        try {
-            String pem = privateKeyPem
-                    .replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replaceAll("\\s+", "");
-            byte[] keyBytes = Base64.getDecoder().decode(pem);
-            PrivateKey privateKey = KeyFactory.getInstance("RSA")
-                    .generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-            Instant now = Instant.now();
-            JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .issuer(appId)
-                    .issueTime(java.util.Date.from(now))
-                    .expirationTime(java.util.Date.from(now.plusSeconds(540)))
-                    .build();
-            SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), claims);
-            jwt.sign(new RSASSASigner((RSAPrivateKey) privateKey));
-            return jwt.serialize();
-        } catch (Exception e) {
-            throw new IllegalStateException("Unable to build JWT", e);
-        }
+  public String buildJwt(String appId, String privateKeyPem) {
+    try {
+      String pem = privateKeyPem
+          .replace("-----BEGIN PRIVATE KEY-----", "")
+          .replace("-----END PRIVATE KEY-----", "")
+          .replaceAll("\\s+", "");
+      byte[] keyBytes = Base64.getDecoder().decode(pem);
+      PrivateKey privateKey = KeyFactory.getInstance("RSA")
+          .generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+      Instant now = Instant.now();
+      JWTClaimsSet claims = new JWTClaimsSet.Builder()
+          .issuer(appId)
+          .issueTime(java.util.Date.from(now))
+          .expirationTime(java.util.Date.from(now.plusSeconds(540)))
+          .build();
+      SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), claims);
+      jwt.sign(new RSASSASigner((RSAPrivateKey) privateKey));
+      return jwt.serialize();
+    } catch (Exception e) {
+      throw new IllegalStateException("Unable to build JWT", e);
     }
+  }
 }

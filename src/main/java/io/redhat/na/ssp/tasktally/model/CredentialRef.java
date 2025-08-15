@@ -9,30 +9,30 @@ import java.time.Instant;
 @Table(name = "credential_refs")
 public class CredentialRef extends PanacheEntityBase {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  public Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_preferences_id", nullable = false)
-    public UserPreferences userPreferences;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_preferences_id", nullable = false)
+  public UserPreferences userPreferences;
 
-    @Column(nullable = false)
-    @NotBlank
-    public String name;
+  @Column(nullable = false)
+  @NotBlank
+  public String name;
 
-    @Column(nullable = false)
-    @NotBlank
-    public String provider;
+  @Column(nullable = false)
+  @NotBlank
+  public String provider;
 
-    @Column(nullable = false)
-    @NotBlank
-    public String scope;
+  @Column(nullable = false)
+  @NotBlank
+  public String scope;
 
-    @Column(name = "secret_ref", nullable = false)
-    @NotBlank
-    public String secretRef;
+  @Column(name = "secret_ref", nullable = false)
+  @NotBlank
+  public String secretRef;
 
-    @Column(name = "created_at")
-    public Instant createdAt;
+  @Column(name = "created_at")
+  public Instant createdAt;
 }

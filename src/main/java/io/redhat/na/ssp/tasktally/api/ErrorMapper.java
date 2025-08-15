@@ -13,26 +13,26 @@ import java.util.Map;
 
 @Provider
 public class ErrorMapper implements ExceptionMapper<Throwable> {
-    @Override
-    public Response toResponse(Throwable throwable) {
-        int status = 500;
-        String code = "INTERNAL_ERROR";
-        String message = "";
-        if (throwable instanceof ConstraintViolationException cve) {
-            status = 400;
-            code = "VALIDATION_ERROR";
-            message = cve.getConstraintViolations().iterator().next().getMessage();
-        } else if (throwable instanceof WebApplicationException wae) {
-            status = wae.getResponse().getStatus();
-            code = "HTTP_" + status;
-            message = wae.getMessage();
-        } else {
-            message = throwable.getMessage();
-        }
-        Map<String, String> err = new HashMap<>();
-        err.put("code", code);
-        err.put("message", message == null ? "" : message);
-        err.put("requestId", String.valueOf(MDC.get("requestId")));
-        return Response.status(status).type(MediaType.APPLICATION_JSON).entity(err).build();
+  @Override
+  public Response toResponse(Throwable throwable) {
+    int status = 500;
+    String code = "INTERNAL_ERROR";
+    String message = "";
+    if (throwable instanceof ConstraintViolationException cve) {
+      status = 400;
+      code = "VALIDATION_ERROR";
+      message = cve.getConstraintViolations().iterator().next().getMessage();
+    } else if (throwable instanceof WebApplicationException wae) {
+      status = wae.getResponse().getStatus();
+      code = "HTTP_" + status;
+      message = wae.getMessage();
+    } else {
+      message = throwable.getMessage();
     }
+    Map<String, String> err = new HashMap<>();
+    err.put("code", code);
+    err.put("message", message == null ? "" : message);
+    err.put("requestId", String.valueOf(MDC.get("requestId")));
+    return Response.status(status).type(MediaType.APPLICATION_JSON).entity(err).build();
+  }
 }

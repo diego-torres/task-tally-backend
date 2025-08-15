@@ -18,45 +18,45 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 public class GitHubResource {
 
-    @Inject
-    PreferencesService preferencesService;
+  @Inject
+  PreferencesService preferencesService;
 
-    @Inject
-    TemplateService templateService;
+  @Inject
+  TemplateService templateService;
 
-    private String userId(HttpHeaders headers) {
-        String id = headers.getHeaderString("X-User-Id");
-        if (id == null || id.isBlank()) {
-            throw new NotAuthorizedException("X-User-Id required");
-        }
-        return id;
+  private String userId(HttpHeaders headers) {
+    String id = headers.getHeaderString("X-User-Id");
+    if (id == null || id.isBlank()) {
+      throw new NotAuthorizedException("X-User-Id required");
     }
+    return id;
+  }
 
-    @POST
-    @Path("/link")
-    public CredentialResponse link(@Valid GitHubLinkRequest req, @Context HttpHeaders headers) {
-        CredentialRef ref = new CredentialRef();
-        ref.name = req.name;
-        ref.provider = "github";
-        ref.scope = req.scope;
-        ref.secretRef = req.ref;
-        CredentialRef saved = preferencesService.addCredential(userId(headers), ref);
-        CredentialResponse resp = new CredentialResponse();
-        resp.name = saved.name;
-        resp.provider = saved.provider;
-        resp.scope = saved.scope;
-        return resp;
-    }
+  @POST
+  @Path("/link")
+  public CredentialResponse link(@Valid GitHubLinkRequest req, @Context HttpHeaders headers) {
+    CredentialRef ref = new CredentialRef();
+    ref.name = req.name;
+    ref.provider = "github";
+    ref.scope = req.scope;
+    ref.secretRef = req.ref;
+    CredentialRef saved = preferencesService.addCredential(userId(headers), ref);
+    CredentialResponse resp = new CredentialResponse();
+    resp.name = saved.name;
+    resp.provider = saved.provider;
+    resp.scope = saved.scope;
+    return resp;
+  }
 
-    @POST
-    @Path("/templates/pull")
-    public List<ProjectTemplate> pullTemplates(@Valid TemplatePullRequest req, @Context HttpHeaders headers) {
-        return templateService.pullTemplates(userId(headers), req);
-    }
+  @POST
+  @Path("/templates/pull")
+  public List<ProjectTemplate> pullTemplates(@Valid TemplatePullRequest req, @Context HttpHeaders headers) {
+    return templateService.pullTemplates(userId(headers), req);
+  }
 
-    @POST
-    @Path("/templates/push")
-    public void pushTemplates(@Valid TemplatePushRequest req, @Context HttpHeaders headers) {
-        throw new UnsupportedOperationException("TODO");
-    }
+  @POST
+  @Path("/templates/push")
+  public void pushTemplates(@Valid TemplatePushRequest req, @Context HttpHeaders headers) {
+    throw new UnsupportedOperationException("TODO");
+  }
 }

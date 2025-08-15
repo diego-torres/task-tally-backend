@@ -180,7 +180,12 @@ Use @QuarkusTest. Testcontainers for Postgres with Flyway. Mock GitHub calls. Ad
 - **Resolver:** Component that translates SecretRef → secret value at runtime.
 - **Template:** YAML document describing reusable project/task structures.
 
+## Formatting Rules
+
+- **Java files:** Use 2 spaces for indentation throughout all `.java` files. No tabs allowed.
+
 ---
 
 *End of AGENTS.md*
+
 

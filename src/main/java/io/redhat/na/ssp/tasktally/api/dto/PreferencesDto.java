@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PreferencesDto {
-    @NotNull
-    public Map<String, Object> ui = new HashMap<>();
-    public String defaultGitProvider;
-    public Integer version;
+  @NotNull
+  public Map<String, Object> ui = new HashMap<>();
+  public String defaultGitProvider;
+  public Integer version;
 }

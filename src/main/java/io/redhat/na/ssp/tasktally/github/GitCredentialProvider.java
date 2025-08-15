@@ -11,29 +11,29 @@ import java.io.IOException;
 @ApplicationScoped
 public class GitCredentialProvider {
 
-    @Inject
-    SecretResolver resolver;
+  @Inject
+  SecretResolver resolver;
 
-    @Inject
-    GitHubAppJwtBuilder jwtBuilder;
+  @Inject
+  GitHubAppJwtBuilder jwtBuilder;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper();
 
-    public String provideToken(CredentialRef ref) {
-        String payload = resolver.resolve(ref.secretRef);
-        try {
-            JsonNode node = mapper.readTree(payload);
-            if (node.has("token")) {
-                return node.get("token").asText();
-            }
-            if (node.has("appId")) {
-                return jwtBuilder.buildJwt(
-                        node.get("appId").asText(),
-                        node.get("privateKeyPem").asText());
-            }
-            throw new IllegalStateException("Unsupported credential payload");
-        } catch (IOException e) {
-            throw new IllegalStateException("Invalid secret payload", e);
-        }
+  public String provideToken(CredentialRef ref) {
+    String payload = resolver.resolve(ref.secretRef);
+    try {
+      JsonNode node = mapper.readTree(payload);
+      if (node.has("token")) {
+        return node.get("token").asText();
+      }
+      if (node.has("appId")) {
+        return jwtBuilder.buildJwt(
+            node.get("appId").asText(),
+            node.get("privateKeyPem").asText());
+      }
+      throw new IllegalStateException("Unsupported credential payload");
+    } catch (IOException e) {
+      throw new IllegalStateException("Invalid secret payload", e);
     }
+  }
 }
