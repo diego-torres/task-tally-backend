@@ -15,9 +15,11 @@ import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.service.PreferencesService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class TemplateService {
+  private static final Logger LOG = Logger.getLogger(TemplateService.class);
 
   @Inject
   PreferencesService preferencesService;
@@ -28,6 +30,7 @@ public class TemplateService {
   private final Yaml yaml = new Yaml(new Constructor(ProjectTemplate.class, new org.yaml.snakeyaml.LoaderOptions()));
 
   public List<ProjectTemplate> pullTemplates(String userId, TemplatePullRequest req) {
+    LOG.debugf("Pulling templates from %s for user %s", req.repoUri, userId);
     CredentialRef cred = null;
     if (req.credentialName != null && !req.credentialName.isBlank()) {
       cred = preferencesService.findCredential(userId, req.credentialName);
@@ -43,11 +46,16 @@ public class TemplateService {
           String content = Files.readString(templateFile);
           templates.add(yaml.load(content));
         } catch (IOException e) {
+          LOG.error("Failed reading template file", e);
           throw new RuntimeException(e);
         }
+      } else {
+        LOG.warnf("No template.yml found at %s", templateFile);
       }
+      LOG.infof("Pulled %d templates for user %s", templates.size(), userId);
       return templates;
     } catch (IOException | GitAPIException e) {
+      LOG.error("Failed to pull templates", e);
       throw new IllegalStateException("Failed to pull templates", e);
     }
   }
