@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Comments for clarity
+COMMENT ON TABLE user_preferences IS 'Per-user non-secret settings and defaults (JSONB)';
+COMMENT ON COLUMN user_preferences.ui IS 'Flexible UI preferences and defaults, stored as JSONB';
+
 -- credential_refs table
 CREATE TABLE IF NOT EXISTS credential_refs (
   id                  BIGSERIAL PRIMARY KEY,
@@ -20,16 +24,35 @@ CREATE TABLE IF NOT EXISTS credential_refs (
   provider            TEXT NOT NULL,
   scope               TEXT NOT NULL,
   secret_ref          TEXT NOT NULL,
+  known_hosts_ref     TEXT,
+  passphrase_ref      TEXT,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT credential_refs_provider_chk CHECK (provider IN ('github')),
+  CONSTRAINT credential_refs_provider_chk CHECK (provider IN ('github','ssh_key')),
   CONSTRAINT credential_refs_scope_chk CHECK (scope IN ('read','write')),
   CONSTRAINT credential_refs_unique_name_per_user UNIQUE (user_preferences_id, name)
 );
+
+COMMENT ON TABLE credential_refs IS 'References to external secrets (e.g., k8s or vault) for Git access';
 
 -- Helpful indexes
 CREATE INDEX IF NOT EXISTS idx_user_prefs_user_id ON user_preferences (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_prefs_ui_gin ON user_preferences USING GIN (ui);
 CREATE INDEX IF NOT EXISTS idx_cred_refs_provider ON credential_refs (provider);
+
+-- Lowercase guard-rails
+CREATE OR REPLACE FUNCTION enforce_lowercase_provider_scope()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.provider := lower(NEW.provider);
+  NEW.scope := lower(NEW.scope);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS lowercase_provider_scope ON credential_refs;
+CREATE TRIGGER lowercase_provider_scope
+BEFORE INSERT OR UPDATE ON credential_refs
+FOR EACH ROW EXECUTE FUNCTION enforce_lowercase_provider_scope();
 
 -- Trigger to auto-update updated_at on user_preferences
 CREATE OR REPLACE FUNCTION trg_set_timestamp()
