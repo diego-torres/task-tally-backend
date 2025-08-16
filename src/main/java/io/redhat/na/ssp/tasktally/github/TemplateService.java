@@ -24,7 +24,7 @@ public class TemplateService {
   @Inject
   SshGitService gitService;
 
-  private final Yaml yaml = new Yaml(new Constructor(ProjectTemplate.class));
+  private final Yaml yaml = new Yaml(new Constructor(ProjectTemplate.class, new org.yaml.snakeyaml.LoaderOptions()));
 
   public List<ProjectTemplate> pullTemplates(String userId, TemplatePullRequest req) {
     CredentialRef cred = null;
@@ -36,17 +36,14 @@ public class TemplateService {
       Path repoDir = gitService.cloneShallow(req.repoUri, req.branch, work, cred);
       Path templatesDir = repoDir.resolve(req.path);
       List<ProjectTemplate> templates = new ArrayList<>();
-      try (Stream<Path> stream = Files.list(templatesDir)) {
-        stream
-            .filter(p -> p.toString().endsWith(".yml") || p.toString().endsWith(".yaml"))
-            .forEach(p -> {
-              try {
-                String content = Files.readString(p);
-                templates.add(yaml.load(content));
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            });
+      Path templateFile = templatesDir.resolve("template.yml");
+      if (Files.exists(templateFile)) {
+        try {
+          String content = Files.readString(templateFile);
+          templates.add(yaml.load(content));
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
       return templates;
     } catch (IOException | GitAPIException e) {
