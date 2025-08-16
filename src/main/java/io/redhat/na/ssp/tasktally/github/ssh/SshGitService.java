@@ -61,7 +61,7 @@ public class SshGitService {
       git.close();
       LOG.infof("Cloned repository %s", uri);
       return dir;
-    } catch (GitAPIException | IOException e) {
+    } catch (GitAPIException e) {
       LOG.errorf("Failed to clone %s", uri, e);
       throw e;
     }
