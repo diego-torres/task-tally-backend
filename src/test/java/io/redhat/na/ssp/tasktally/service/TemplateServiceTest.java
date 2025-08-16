@@ -1,26 +1,28 @@
 package io.redhat.na.ssp.tasktally.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.mockito.InjectMock;
 import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
 import io.redhat.na.ssp.tasktally.model.Template;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
 import io.redhat.na.ssp.tasktally.repo.TemplateRepository;
 import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
 import jakarta.inject.Inject;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.eclipse.jgit.api.errors.GitAPIException;
-
-import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 public class TemplateServiceTest {
