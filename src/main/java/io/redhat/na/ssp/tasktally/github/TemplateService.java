@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 @ApplicationScoped
 public class TemplateService {
@@ -23,7 +24,7 @@ public class TemplateService {
   @Inject
   SshGitService gitService;
 
-  private final Yaml yaml = new Yaml();
+  private final Yaml yaml = new Yaml(new Constructor(ProjectTemplate.class));
 
   public List<ProjectTemplate> pullTemplates(String userId, TemplatePullRequest req) {
     CredentialRef cred = null;
@@ -41,7 +42,7 @@ public class TemplateService {
             .forEach(p -> {
               try {
                 String content = Files.readString(p);
-                templates.add(yaml.loadAs(content, ProjectTemplate.class));
+                templates.add(yaml.load(content));
               } catch (IOException e) {
                 throw new RuntimeException(e);
               }
