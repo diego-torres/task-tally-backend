@@ -2,6 +2,26 @@
 
 Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and GitHub template operations.
 
+## Dev Environment
+
+To set up and run the development environment, follow these steps:
+
+### 1. Start a Postgres container using Podman
+
+```sh
+podman run --name task-tally-postgres -e POSTGRES_USER=tasktally -e POSTGRES_PASSWORD=tasktally -e POSTGRES_DB=tasktally -p 5432:5432 -d postgres:15
+```
+
+This command will start a Postgres 15 container with the default credentials and database name used by the application.
+
+### 2. Start the development environment
+
+```sh
+./mvnw compile quarkus:dev
+```
+
+This will launch the Quarkus development server. The application will connect to the Postgres instance started above.
+
 ## Runtime configuration
 All configuration is supplied via environment variables.
 

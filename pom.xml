@@ -111,6 +111,12 @@
       <artifactId>nimbus-jose-jwt</artifactId>
       <version>9.37.3</version>
     </dependency>
+    <!-- Added dotenv-java for .env file management -->
+    <dependency>
+      <groupId>io.github.cdimascio</groupId>
+      <artifactId>dotenv-java</artifactId>
+      <version>3.2.0</version>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
