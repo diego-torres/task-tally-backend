@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.util.Collections;
 
+import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.keyprovider.KeyPairProvider;
 import org.apache.sshd.common.util.security.SecurityUtils;
 import org.eclipse.jgit.transport.sshd.KnownHostsServerKeyVerifier;
@@ -18,8 +19,13 @@ public final class TaskTallySshdSessionFactory {
   private TaskTallySshdSessionFactory() {
   }
 
-  public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase) throws IOException {
-    KeyPair kp = SecurityUtils.loadKeyPairIdentity("key", new ByteArrayInputStream(privateKey), (session, resourceKey, retry) -> passphrase);
+  public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase)
+      throws IOException {
+    FilePasswordProvider pwd =
+        passphrase == null
+            ? FilePasswordProvider.EMPTY
+            : (session, resourceKey, retryIndex) -> passphrase;
+    KeyPair kp = SecurityUtils.loadKeyPairIdentity("key", new ByteArrayInputStream(privateKey), pwd);
     KeyPairProvider provider = session -> Collections.singletonList(kp);
 
     SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();

@@ -12,7 +12,6 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 @Path("/api/git/ssh")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -33,7 +32,7 @@ public class GitSshResource {
     }
     String uri = "git@" + req.provider + ".com:" + req.owner + "/" + req.repo + ".git";
     try {
-      Path dir = Files.createTempDirectory("git-validate");
+      java.nio.file.Path dir = Files.createTempDirectory("git-validate");
       git.cloneShallow(uri, req.branch, dir, cred);
       return Response.ok(new ValidateResult(true, "Authentication succeeded and repo reachable")).build();
     } catch (Exception e) {

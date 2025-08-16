@@ -3,7 +3,7 @@ package io.redhat.na.ssp.tasktally.github;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.secrets.SecretResolver;
+import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
