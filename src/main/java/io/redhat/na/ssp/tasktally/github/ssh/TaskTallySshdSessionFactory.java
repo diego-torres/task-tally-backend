@@ -1,14 +1,7 @@
 package io.redhat.na.ssp.tasktally.github.ssh;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.security.KeyPair;
-import java.util.Collections;
 
-import org.apache.sshd.client.config.keys.KeyIdentityProvider;
-import org.apache.sshd.client.keyverifier.KnownHostsServerKeyVerifier;
-import org.apache.sshd.common.config.keys.FilePasswordProvider;
-import org.apache.sshd.common.util.security.SecurityUtils;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder;
 
@@ -21,19 +14,21 @@ public final class TaskTallySshdSessionFactory {
 
   public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase)
       throws IOException {
-    FilePasswordProvider pwd =
-        passphrase == null
-            ? FilePasswordProvider.EMPTY
-            : (session, resourceKey, retryIndex) -> new String(passphrase);
-    KeyPair kp =
-        SecurityUtils.loadKeyPairIdentity(
-            null, "key", new ByteArrayInputStream(privateKey), pwd);
-    KeyIdentityProvider provider = session -> Collections.singletonList(kp);
+    // Create a temp directory for SSH files
+    java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("jgit-ssh");
+
+    // Write private key to id_ed25519 (or id_rsa) in temp dir
+    java.nio.file.Path keyFile = tempDir.resolve("id_ed25519");
+    java.nio.file.Files.write(keyFile, privateKey, java.nio.file.StandardOpenOption.CREATE);
+
+    // Write known_hosts to temp dir
+    java.nio.file.Path knownHostsFile = tempDir.resolve("known_hosts");
+    java.nio.file.Files.write(knownHostsFile, knownHosts, java.nio.file.StandardOpenOption.CREATE);
+
+    // Optionally write passphrase to a file if needed (JGit does not support this directly)
 
     SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();
-    builder.setHomeDirectory(null);
-    builder.setServerKeyVerifier(new KnownHostsServerKeyVerifier(new ByteArrayInputStream(knownHosts), true));
-    builder.setClientKeyIdentityProvider(provider);
+  builder.setHomeDirectory(tempDir.toFile());
     return builder.build(null);
   }
 }
