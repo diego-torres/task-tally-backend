@@ -16,7 +16,7 @@ class TaskTallySshdSessionFactoryTest {
   void buildsFactoryFromInMemoryKey() throws Exception {
     // Ensure EdDSA provider is registered
     java.security.Security.addProvider(new net.i2p.crypto.eddsa.EdDSASecurityProvider());
-    java.security.KeyPairGenerator gen = java.security.KeyPairGenerator.getInstance("Ed25519", "EdDSA");
+    java.security.KeyPairGenerator gen = java.security.KeyPairGenerator.getInstance("EdDSA", "EdDSA");
     gen.initialize(new net.i2p.crypto.eddsa.spec.EdDSAGenParameterSpec("Ed25519"));
     KeyPair kp = gen.generateKeyPair();
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
