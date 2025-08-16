@@ -23,6 +23,7 @@ class TaskTallySshdSessionFactoryTest {
   new OpenSSHKeyPairResourceWriter().writePrivateKey(kp, null, new OpenSSHKeyEncryptionContext(), bos);
   byte[] priv = bos.toByteArray();
   String known = "example.com ssh-ed25519 " + Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
-  assertNotNull(TaskTallySshdSessionFactory.create(priv, known.getBytes(StandardCharsets.UTF_8), new char[0]));
+  java.nio.file.Path tempSshDir = java.nio.file.Files.createTempDirectory("ssh-test");
+  assertNotNull(TaskTallySshdSessionFactory.create(priv, known.getBytes(StandardCharsets.UTF_8), new char[0], tempSshDir.toFile()));
   }
 }

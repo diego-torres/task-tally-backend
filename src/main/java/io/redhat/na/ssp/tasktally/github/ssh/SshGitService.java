@@ -21,10 +21,11 @@ public class SshGitService {
   @Inject SecretResolver resolver;
 
   private SshdSessionFactory factoryFor(CredentialRef cred) throws IOException {
-    byte[] key = resolver.resolveBytes(cred.getSecretRef());
-    byte[] known = resolver.resolveBytes(cred.getKnownHostsRef());
-    char[] pass = cred.getPassphraseRef() != null ? resolver.resolve(cred.getPassphraseRef()).toCharArray() : null;
-    return TaskTallySshdSessionFactory.create(key, known, pass);
+  byte[] key = resolver.resolveBytes(cred.getSecretRef());
+  byte[] known = resolver.resolveBytes(cred.getKnownHostsRef());
+  char[] pass = cred.getPassphraseRef() != null ? resolver.resolve(cred.getPassphraseRef()).toCharArray() : null;
+  java.nio.file.Path tempSshDir = java.nio.file.Files.createTempDirectory("ssh-service");
+  return TaskTallySshdSessionFactory.create(key, known, pass, tempSshDir.toFile());
   }
 
   private TransportConfigCallback callback(SshdSessionFactory factory) {

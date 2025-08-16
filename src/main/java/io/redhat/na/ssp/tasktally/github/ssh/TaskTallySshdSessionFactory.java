@@ -12,10 +12,9 @@ public final class TaskTallySshdSessionFactory {
   private TaskTallySshdSessionFactory() {
   }
 
-  public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase)
+  public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase, java.io.File sshDir)
       throws IOException {
-    // Create a temp directory for SSH files
-    java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("jgit-ssh");
+    java.nio.file.Path tempDir = sshDir != null ? sshDir.toPath() : java.nio.file.Files.createTempDirectory("jgit-ssh");
 
     // Write private key to id_ed25519 (or id_rsa) in temp dir
     java.nio.file.Path keyFile = tempDir.resolve("id_ed25519");
@@ -28,7 +27,7 @@ public final class TaskTallySshdSessionFactory {
     // Optionally write passphrase to a file if needed (JGit does not support this directly)
 
     SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();
-  builder.setHomeDirectory(tempDir.toFile());
+    builder.setHomeDirectory(tempDir.toFile());
     return builder.build(null);
   }
 }
