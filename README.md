@@ -10,12 +10,12 @@ Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preference
 This project provides a `docker-compose.yml` to start Postgres, Vault, and other dependencies for local development.
 
 ```sh
-docker-compose up -d
+podman compose up -d
 ```
 
 This will start all required containers. You can inspect logs with:
 ```sh
-docker-compose logs -f
+podman compose logs -f
 ```
 
 ### 2. Bootstrap Vault (Local Only)
