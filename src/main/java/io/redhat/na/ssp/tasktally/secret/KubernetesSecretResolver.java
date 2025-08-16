@@ -20,8 +20,11 @@ public class KubernetesSecretResolver implements SecretResolver {
   private final Path basePath;
 
   public KubernetesSecretResolver() {
-    String env = System.getenv().getOrDefault("K8S_SECRET_BASE_PATH", "/var/run/secrets");
-    this.basePath = Paths.get(env);
+    String base = System.getProperty("k8s.secret.base.path");
+    if (base == null || base.isBlank()) {
+      base = System.getenv().getOrDefault("K8S_SECRET_BASE_PATH", "/var/run/secrets");
+    }
+    this.basePath = Paths.get(base);
   }
 
   // Package-private constructor for tests
@@ -54,6 +57,9 @@ public class KubernetesSecretResolver implements SecretResolver {
 
     String envKey = (name + "_" + key).toUpperCase(Locale.ROOT).replace('-', '_').replace('.', '_');
     String envVal = System.getenv(envKey);
+    if (envVal == null) {
+      envVal = System.getProperty("env." + envKey);
+    }
     if (envVal != null) {
       return envVal.getBytes(StandardCharsets.UTF_8);
     }
