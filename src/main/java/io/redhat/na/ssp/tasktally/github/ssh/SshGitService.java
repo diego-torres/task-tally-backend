@@ -7,10 +7,10 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Path;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.Transport;
-import org.eclipse.jgit.transport.TransportConfigCallback;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
 
 /**
