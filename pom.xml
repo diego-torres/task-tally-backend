@@ -53,6 +53,27 @@
       <version>3.6.0</version>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <version>6.9.0.202403050737-r</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit.ssh.apache</artifactId>
+      <version>6.9.0.202403050737-r</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.sshd</groupId>
+      <artifactId>sshd-core</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+    <!-- Apache Mina SSHD Common (contains SecurityUtils) -->
+    <dependency>
+      <groupId>org.apache.sshd</groupId>
+      <artifactId>sshd-common</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-oidc</artifactId>
     </dependency>

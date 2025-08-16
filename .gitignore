@@ -17,4 +17,3 @@ buildNumber.properties
 .classpath
 .DS_Store
 .env
-key.pem

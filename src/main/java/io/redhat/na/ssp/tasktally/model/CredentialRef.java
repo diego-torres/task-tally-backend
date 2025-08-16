@@ -5,6 +5,10 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 
+/**
+ * Reference to a Git credential. Secret material is stored externally and
+ * referenced via SecretRefs.
+ */
 @Entity
 @Table(name = "credential_refs")
 public class CredentialRef extends PanacheEntityBase {
@@ -33,13 +37,28 @@ public class CredentialRef extends PanacheEntityBase {
   @NotBlank
   public String secretRef;
 
+  @Column(name = "known_hosts_ref")
+  public String knownHostsRef;
+
+  @Column(name = "passphrase_ref")
+  public String passphraseRef;
+
   @Column(name = "created_at")
   public Instant createdAt;
 
-    @PrePersist
-    public void prePersist() {
-      if (createdAt == null) {
-        createdAt = Instant.now();
-      }
+  @PrePersist
+  public void prePersist() {
+    if (createdAt == null) {
+      createdAt = Instant.now();
     }
+  }
+
+  // getters for non-panache components that expect them
+  public String getName() { return name; }
+  public String getProvider() { return provider; }
+  public String getScope() { return scope; }
+  public String getSecretRef() { return secretRef; }
+  public String getKnownHostsRef() { return knownHostsRef; }
+  public String getPassphraseRef() { return passphraseRef; }
 }
+

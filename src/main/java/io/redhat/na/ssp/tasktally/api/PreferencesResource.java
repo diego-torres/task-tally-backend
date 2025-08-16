@@ -63,6 +63,8 @@ public class PreferencesResource {
     ref.provider = req.provider;
     ref.scope = req.scope;
     ref.secretRef = req.secretRef;
+    ref.knownHostsRef = req.knownHostsRef;
+    ref.passphraseRef = req.passphraseRef;
     CredentialRef saved = service.addCredential(userId(headers), ref);
     CredentialResponse resp = new CredentialResponse();
     resp.name = saved.name;
