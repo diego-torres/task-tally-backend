@@ -47,5 +47,55 @@ curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
   http://localhost:8080/api/github/templates/pull
 ```
 
+## Using SSH with GitHub/GitLab
+
+1. **Generate key**
+```bash
+ssh-keygen -t ed25519 -C "tasktally-bot" -f id_ed25519
+```
+
+2. **Register public key**
+- GitHub → Repo → Settings → Deploy Keys → Add deploy key → Allow write access
+- GitLab → Project → Settings → Repository → Deploy Keys → enable write
+
+3. **Create Kubernetes Secret**
+```bash
+kubectl create secret generic tasktally-git-user123 \
+     --from-file=id_ed25519=./id_ed25519 \
+     --from-file=id_ed25519.pub=./id_ed25519.pub \
+     --from-file=known_hosts=./known_hosts
+```
+
+4. **known_hosts example**
+```bash
+ssh-keyscan -t ed25519 github.com >> known_hosts
+ssh-keyscan -t ed25519 gitlab.com >> known_hosts
+```
+
+5. **Link credential**
+```bash
+curl -X POST $BASE/api/preferences/me/credentials   -H "Content-Type: application/json" -H "X-User-Id: user123"   -d '{
+      "name":"my-gh-deploy-key",
+      "provider":"github",
+      "scope":"write",
+      "secretRef":"k8s:secret/tasktally-git-user123#id_ed25519",
+      "knownHostsRef":"k8s:secret/tasktally-git-user123#known_hosts"
+    }'
+```
+
+6. **Validate SSH**
+```bash
+curl -X POST $BASE/api/git/ssh/validate   -H "Content-Type: application/json" -H "X-User-Id: user123"   -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-deploy-key"}'
+```
+
+7. **Push templates/proposals**
+Use SSH remote: `git@github.com:owner/repo.git`.
+
+8. **Codegen instructions**
+- Always read `AGENTS.md` before generating code.
+- Use prompt snippets in §10 for entities, REST, SecretResolver, and tests.
+- Never output raw secrets; use placeholders + SecretRefs.
+- New DB schema changes must ship with Flyway migrations + tests.
+
 ## Health
 Standard Quarkus health endpoints are exposed at `/q/health`.
