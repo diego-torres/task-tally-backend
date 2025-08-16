@@ -12,6 +12,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
+import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder;
 
 /**
  * Git operations over SSH using JGit.
@@ -21,11 +22,17 @@ public class SshGitService {
   @Inject SecretResolver resolver;
 
   private SshdSessionFactory factoryFor(CredentialRef cred) throws IOException {
-  byte[] key = resolver.resolveBytes(cred.getSecretRef());
-  byte[] known = resolver.resolveBytes(cred.getKnownHostsRef());
-  char[] pass = cred.getPassphraseRef() != null ? resolver.resolve(cred.getPassphraseRef()).toCharArray() : null;
-  java.nio.file.Path tempSshDir = java.nio.file.Files.createTempDirectory("ssh-service");
-  return TaskTallySshdSessionFactory.create(key, known, pass, tempSshDir.toFile());
+    if (cred == null) {
+      java.io.File home = new java.io.File(System.getProperty("user.home"));
+      return new SshdSessionFactoryBuilder()
+          .setHomeDirectory(home)
+          .setSshDirectory(new java.io.File(home, ".ssh"))
+          .build(null);
+    }
+    byte[] key = resolver.resolveBytes(cred.getSecretRef());
+    byte[] known = cred.getKnownHostsRef() != null ? resolver.resolveBytes(cred.getKnownHostsRef()) : new byte[0];
+    char[] pass = cred.getPassphraseRef() != null ? resolver.resolve(cred.getPassphraseRef()).toCharArray() : null;
+    return TaskTallySshdSessionFactory.create(key, known, pass, null);
   }
 
   private TransportConfigCallback callback(SshdSessionFactory factory) {
@@ -37,16 +44,16 @@ public class SshGitService {
 
   public Path cloneShallow(String uri, String branch, Path dir, CredentialRef cred) throws GitAPIException, IOException {
     SshdSessionFactory fac = factoryFor(cred);
-    return Git.cloneRepository()
+    Git git = Git.cloneRepository()
         .setURI(uri)
         .setBranch(branch)
         .setDepth(1)
         .setDirectory(dir.toFile())
         .setTransportConfigCallback(callback(fac))
-        .call()
-        .getRepository()
-        .getDirectory()
-        .toPath();
+        .call();
+    git.getRepository().close();
+    git.close();
+    return dir;
   }
 
   public void commitAndPush(Path dir, String authorName, String authorEmail, String message, CredentialRef cred) throws IOException, GitAPIException {
