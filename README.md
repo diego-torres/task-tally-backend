@@ -1,26 +1,44 @@
 # Task Tally Backend
 
+
 Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and Git template operations over SSH.
 
-## Dev Environment
+## Quickstart: Local Development Environment
 
-To set up and run the development environment, follow these steps:
+### 1. Start All Services with Docker Compose
 
-### 1. Start a Postgres container using Podman
+This project provides a `docker-compose.yml` to start Postgres, Vault, and other dependencies for local development.
 
 ```sh
-podman run --name task-tally-postgres -e POSTGRES_USER=tasktally -e POSTGRES_PASSWORD=tasktally -e POSTGRES_DB=tasktally -p 5432:5432 -d postgres:15
+docker-compose up -d
 ```
 
-This command will start a Postgres 15 container with the default credentials and database name used by the application.
+This will start all required containers. You can inspect logs with:
+```sh
+docker-compose logs -f
+```
 
-### 2. Start the development environment
+### 2. Bootstrap Vault (Local Only)
 
+The `init-vault.sh` script will automatically run in the `vault-init` service (see `docker-compose.yml`). It enables KV v2, writes a `tasktally` policy, and issues a dev token saved at `vault/bootstrap/dev-app-token.txt`.
+
+After containers are up, retrieve the token from `vault/bootstrap/dev-app-token.txt` and set it in your `src/main/resources/application.properties`:
+
+```
+quarkus.vault.url=http://localhost:8200
+quarkus.vault.authentication=token
+quarkus.vault.token=<paste token here>
+```
+
+### 3. Start the Backend (Quarkus)
+
+You can run the backend in dev mode:
 ```sh
 ./mvnw compile quarkus:dev
 ```
+The application will connect to the Postgres and Vault instances started above.
 
-This will launch the Quarkus development server. The application will connect to the Postgres instance started above.
+---
 
 ## Runtime configuration
 All configuration is supplied via environment variables.
