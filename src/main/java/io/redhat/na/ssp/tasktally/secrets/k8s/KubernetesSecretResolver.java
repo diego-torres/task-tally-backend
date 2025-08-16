@@ -1,11 +1,11 @@
 package io.redhat.na.ssp.tasktally.secrets.k8s;
 
-import io.redhat.na.ssp.tasktally.secrets.SecretResolver;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
+
+import io.redhat.na.ssp.tasktally.secrets.SecretResolver;
 
 /**
  * Resolves secrets from a Kubernetes-mounted secret base path.

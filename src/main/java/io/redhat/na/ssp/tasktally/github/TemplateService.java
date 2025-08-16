@@ -1,19 +1,20 @@
 package io.redhat.na.ssp.tasktally.github;
 
-import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.service.PreferencesService;
-import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
+
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+
+import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
+import io.redhat.na.ssp.tasktally.model.CredentialRef;
+import io.redhat.na.ssp.tasktally.service.PreferencesService;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class TemplateService {
