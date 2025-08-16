@@ -9,38 +9,49 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.jboss.logging.Logger;
 
 @Path("/api/users/{userId}/templates")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class TemplateResource {
+  private static final Logger LOG = Logger.getLogger(TemplateResource.class);
 
   @Inject TemplateService service;
 
   @GET
   public List<TemplateDto> list(@PathParam("userId") String userId) {
-    return service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
+    LOG.debugf("Listing templates for user %s", userId);
+    List<TemplateDto> list = service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
+    LOG.infof("Retrieved %d templates for user %s", list.size(), userId);
+    return list;
   }
 
   @POST
   public TemplateDto create(@PathParam("userId") String userId, @Valid TemplateDto dto) {
+    LOG.debugf("Creating template %s for user %s", dto.name, userId);
     Template tmpl = fromDto(dto);
     Template saved = service.create(userId, tmpl);
+    LOG.infof("Created template %s for user %s", saved.name, userId);
     return toDto(saved);
   }
 
   @PUT
   @Path("/{id}")
   public TemplateDto update(@PathParam("userId") String userId, @PathParam("id") Long id, @Valid TemplateDto dto) {
+    LOG.debugf("Updating template %d for user %s", id, userId);
     Template tmpl = fromDto(dto);
     Template updated = service.update(userId, id, tmpl);
+    LOG.infof("Updated template %d for user %s", id, userId);
     return toDto(updated);
   }
 
   @DELETE
   @Path("/{id}")
   public void delete(@PathParam("userId") String userId, @PathParam("id") Long id) {
+    LOG.debugf("Deleting template %d for user %s", id, userId);
     service.delete(userId, id);
+    LOG.infof("Deleted template %d for user %s", id, userId);
   }
 
   private TemplateDto toDto(Template t) {
