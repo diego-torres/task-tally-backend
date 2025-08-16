@@ -1,9 +1,13 @@
 package io.redhat.na.ssp.tasktally.secrets;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
-import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
+import io.redhat.na.ssp.tasktally.secret.KubernetesSecretResolver;
 
 public class KubernetesSecretResolverTest {
 

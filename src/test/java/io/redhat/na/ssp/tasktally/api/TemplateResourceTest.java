@@ -5,7 +5,7 @@ import io.quarkus.test.InjectMock;
 import io.redhat.na.ssp.tasktally.github.GitHubClient;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.service.PreferencesService;
-import io.redhat.na.ssp.tasktally.secrets.SecretResolver;
+import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
