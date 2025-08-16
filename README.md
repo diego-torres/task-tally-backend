@@ -1,6 +1,6 @@
 # Task Tally Backend
 
-Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and GitHub template operations.
+Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and Git template operations over SSH.
 
 ## Dev Environment
 
@@ -30,7 +30,6 @@ All configuration is supplied via environment variables.
 | `DB_JDBC_URL` | JDBC URL for PostgreSQL |
 | `DB_USERNAME` | Database username |
 | `DB_PASSWORD` | Database password |
-| `GITHUB_API_BASE` | Base URL for GitHub API (default `https://api.github.com`) |
 | `K8S_SECRET_BASE_PATH` | Base path for mounted Kubernetes secrets |
 
 ## Example secret reference
@@ -57,17 +56,19 @@ curl -H 'X-User-Id: u1' http://localhost:8080/api/preferences/me
 curl -X PUT -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
   -d '{"ui":{"theme":"dark"}}' http://localhost:8080/api/preferences/me
 
-# Link GitHub credential
+# Link SSH credential (optional; defaults to `~/.ssh/id_rsa`)
 curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
-  -d '{"name":"gh","ref":"k8s:secret/mysecret#token"}' http://localhost:8080/api/github/link
+  -d '{"name":"ssh","ref":"k8s:secret/mysecret#id_ed25519","scope":"write"}' http://localhost:8080/api/git/link
 
-# Pull templates
+# Pull templates via SSH
 curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
-  -d '{"owner":"o","repo":"r","path":"templates","branch":"main","credentialName":"gh"}' \
-  http://localhost:8080/api/github/templates/pull
+  -d '{"repoUri":"git@github.com:o/r.git","path":"templates","branch":"main"}' \
+  http://localhost:8080/api/git/templates/pull
 ```
 
 ## Using SSH with GitHub/GitLab
+
+The application looks for a key at `~/.ssh/id_rsa` (or `id_ed25519`) and `~/.ssh/known_hosts` by default. You can also link a credential reference as shown above.
 
 1. **Generate key**
 ```bash

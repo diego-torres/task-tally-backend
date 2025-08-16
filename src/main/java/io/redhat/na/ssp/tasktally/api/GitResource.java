@@ -1,7 +1,11 @@
 package io.redhat.na.ssp.tasktally.api;
 
 import io.redhat.na.ssp.tasktally.api.dto.CredentialResponse;
-import io.redhat.na.ssp.tasktally.github.*;
+import io.redhat.na.ssp.tasktally.github.ProjectTemplate;
+import io.redhat.na.ssp.tasktally.github.TemplatePullRequest;
+import io.redhat.na.ssp.tasktally.github.TemplateService;
+import io.redhat.na.ssp.tasktally.github.TemplatePushRequest;
+import io.redhat.na.ssp.tasktally.github.GitLinkRequest;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.service.PreferencesService;
 import jakarta.inject.Inject;
@@ -10,13 +14,12 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
-
 import java.util.List;
 
-@Path("/api/github")
+@Path("/api/git")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class GitHubResource {
+public class GitResource {
 
   @Inject
   PreferencesService preferencesService;
@@ -34,7 +37,7 @@ public class GitHubResource {
 
   @POST
   @Path("/link")
-  public CredentialResponse link(@Valid GitHubLinkRequest req, @Context HttpHeaders headers) {
+  public CredentialResponse link(@Valid GitLinkRequest req, @Context HttpHeaders headers) {
     CredentialRef ref = new CredentialRef();
     ref.name = req.name;
     ref.provider = "github";

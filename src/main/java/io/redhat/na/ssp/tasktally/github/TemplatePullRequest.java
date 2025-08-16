@@ -4,12 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 
 public class TemplatePullRequest {
   @NotBlank
-  public String owner;
-  @NotBlank
-  public String repo;
+  public String repoUri;
   @NotBlank
   public String path;
   public String branch = "main";
-  @NotBlank
   public String credentialName;
 }
