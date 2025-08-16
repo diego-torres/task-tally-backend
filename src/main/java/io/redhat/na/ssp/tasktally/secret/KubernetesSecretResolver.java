@@ -9,9 +9,12 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 /**
  * Resolves secrets from Kubernetes mounted files or environment variables.
  */
+@ApplicationScoped
 public class KubernetesSecretResolver implements SecretResolver {
   private static final Pattern REF = Pattern.compile("k8s:secret/([^#]+)#(.+)");
   private final Path basePath;
