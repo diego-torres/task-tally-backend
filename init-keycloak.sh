@@ -10,7 +10,7 @@ done
 /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
 
 # Create the client
-/opt/keycloak/bin/kcadm.sh create clients -r master -s clientId=my-client \
+/opt/keycloak/bin/kcadm.sh create clients -r master -s clientId=task-tally-client \
   -s enabled=true \
   -s publicClient=true \
   -s protocol=openid-connect \
