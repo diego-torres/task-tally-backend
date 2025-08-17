@@ -36,6 +36,29 @@ You can run the backend in dev mode:
 ```
 The application will connect to the Postgres and Vault instances started above.
 
+### 4. Keycloak Authentication Service
+
+The `keycloak` container provides OpenID Connect authentication for local development. It is automatically initialized with a public client using the `keycloak-init` service and the `init-keycloak.sh` script.
+
+- **Admin credentials:**
+  - Username: `admin`
+  - Password: `admin`
+- **Client configuration:**
+  - Type: OpenID Connect, Public
+  - Standard Flow enabled; PKCE S256 required
+  - Valid Redirect URIs: `http://localhost:9000/*`
+  - Web Origins: `http://localhost:9000`
+
+The client is created automatically when the containers start. You can modify the initialization script (`init-keycloak.sh`) to change client settings or add more clients.
+
+To access the Keycloak admin console:
+
+```
+http://localhost:8081
+```
+
+Login with the admin credentials above.
+
 ---
 
 ## Runtime configuration
