@@ -17,7 +17,8 @@ import org.jboss.logging.Logger;
 public class TemplateResource {
   private static final Logger LOG = Logger.getLogger(TemplateResource.class);
 
-  @Inject TemplateService service;
+  @Inject
+  TemplateService service;
 
   @GET
   public List<TemplateDto> list(@PathParam("userId") String userId) {

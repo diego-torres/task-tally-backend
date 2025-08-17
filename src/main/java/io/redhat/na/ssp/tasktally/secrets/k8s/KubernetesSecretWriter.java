@@ -19,8 +19,8 @@ public class KubernetesSecretWriter implements SecretWriter {
   }
 
   @Override
-  public SshSecretRefs writeSshKey(String userId, String name, byte[] privateKeyPem,
-                                   byte[] publicKeyOpenSsh, char[] passphrase, byte[] knownHosts) {
+  public SshSecretRefs writeSshKey(String userId, String name, byte[] privateKeyPem, byte[] publicKeyOpenSsh,
+      char[] passphrase, byte[] knownHosts) {
     String slug = slug(name);
     String secretName = "tasktally-ssh-" + userId + "-" + slug;
     Path dir = basePath.resolve(secretName);
@@ -64,9 +64,7 @@ public class KubernetesSecretWriter implements SecretWriter {
   }
 
   private String slug(String in) {
-    String norm = Normalizer.normalize(in, Normalizer.Form.NFD)
-        .replaceAll("[^A-Za-z0-9]", "-")
-        .toLowerCase();
+    String norm = Normalizer.normalize(in, Normalizer.Form.NFD).replaceAll("[^A-Za-z0-9]", "-").toLowerCase();
     return norm.replaceAll("-+", "-");
   }
 }

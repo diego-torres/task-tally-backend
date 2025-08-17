@@ -13,8 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 public class TemplateRepositoryTest {
 
-  @Inject TemplateRepository repo;
-  @Inject UserPreferencesRepository userRepo;
+  @Inject
+  TemplateRepository repo;
+  @Inject
+  UserPreferencesRepository userRepo;
 
   @Test
   @Transactional

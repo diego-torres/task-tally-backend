@@ -36,14 +36,14 @@ public class UserPreferences extends PanacheEntityBase {
 
   @Column(name = "updated_at")
   public Instant updatedAt;
-  
-    @PrePersist
-    public void prePersist() {
-      if (createdAt == null) {
-        createdAt = Instant.now();
-      }
-      if (updatedAt == null) {
-        updatedAt = Instant.now();
-      }
+
+  @PrePersist
+  public void prePersist() {
+    if (createdAt == null) {
+      createdAt = Instant.now();
     }
+    if (updatedAt == null) {
+      updatedAt = Instant.now();
+    }
+  }
 }

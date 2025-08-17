@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 
 /**
- * Reference to a Git credential. Secret material is stored externally and
- * referenced via SecretRefs.
+ * Reference to a Git credential. Secret material is stored externally and referenced via SecretRefs.
  */
 @Entity
 @Table(name = "credential_refs")
@@ -54,11 +53,22 @@ public class CredentialRef extends PanacheEntityBase {
   }
 
   // getters for non-panache components that expect them
-  public String getName() { return name; }
-  public String getProvider() { return provider; }
-  public String getScope() { return scope; }
-  public String getSecretRef() { return secretRef; }
-  public String getKnownHostsRef() { return knownHostsRef; }
-  public String getPassphraseRef() { return passphraseRef; }
+  public String getName() {
+    return name;
+  }
+  public String getProvider() {
+    return provider;
+  }
+  public String getScope() {
+    return scope;
+  }
+  public String getSecretRef() {
+    return secretRef;
+  }
+  public String getKnownHostsRef() {
+    return knownHostsRef;
+  }
+  public String getPassphraseRef() {
+    return passphraseRef;
+  }
 }
-

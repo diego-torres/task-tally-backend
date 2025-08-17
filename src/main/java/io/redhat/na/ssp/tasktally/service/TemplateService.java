@@ -24,9 +24,12 @@ import org.jboss.logging.Logger;
 public class TemplateService {
   private static final Logger LOG = Logger.getLogger(TemplateService.class);
 
-  @Inject TemplateRepository templateRepo;
-  @Inject UserPreferencesRepository userRepo;
-  @Inject SshGitService gitService;
+  @Inject
+  TemplateRepository templateRepo;
+  @Inject
+  UserPreferencesRepository userRepo;
+  @Inject
+  SshGitService gitService;
 
   private final Yaml yaml = new Yaml();
 

@@ -21,15 +21,14 @@ import org.jboss.logging.Logger;
 @ApplicationScoped
 public class SshGitService {
   private static final Logger LOG = Logger.getLogger(SshGitService.class);
-  @Inject SecretResolver resolver;
+  @Inject
+  SecretResolver resolver;
 
   private SshdSessionFactory factoryFor(CredentialRef cred) throws IOException {
     if (cred == null) {
       LOG.debug("Using default SSH configuration");
       java.io.File home = new java.io.File(System.getProperty("user.home"));
-      return new SshdSessionFactoryBuilder()
-          .setHomeDirectory(home)
-          .setSshDirectory(new java.io.File(home, ".ssh"))
+      return new SshdSessionFactoryBuilder().setHomeDirectory(home).setSshDirectory(new java.io.File(home, ".ssh"))
           .build(null);
     }
     LOG.debugf("Using credential %s", cred.getName());
@@ -46,17 +45,13 @@ public class SshGitService {
     };
   }
 
-  public Path cloneShallow(String uri, String branch, Path dir, CredentialRef cred) throws GitAPIException, IOException {
+  public Path cloneShallow(String uri, String branch, Path dir, CredentialRef cred)
+      throws GitAPIException, IOException {
     LOG.debugf("Cloning %s (branch %s)", uri, branch);
     SshdSessionFactory fac = factoryFor(cred);
     try {
-      Git git = Git.cloneRepository()
-          .setURI(uri)
-          .setBranch(branch)
-          .setDepth(1)
-          .setDirectory(dir.toFile())
-          .setTransportConfigCallback(callback(fac))
-          .call();
+      Git git = Git.cloneRepository().setURI(uri).setBranch(branch).setDepth(1).setDirectory(dir.toFile())
+          .setTransportConfigCallback(callback(fac)).call();
       git.getRepository().close();
       git.close();
       LOG.infof("Cloned repository %s", uri);
@@ -67,7 +62,8 @@ public class SshGitService {
     }
   }
 
-  public void commitAndPush(Path dir, String authorName, String authorEmail, String message, CredentialRef cred) throws IOException, GitAPIException {
+  public void commitAndPush(Path dir, String authorName, String authorEmail, String message, CredentialRef cred)
+      throws IOException, GitAPIException {
     LOG.debugf("Committing and pushing in %s", dir);
     SshdSessionFactory fac = factoryFor(cred);
     try (Git git = Git.open(dir.toFile())) {

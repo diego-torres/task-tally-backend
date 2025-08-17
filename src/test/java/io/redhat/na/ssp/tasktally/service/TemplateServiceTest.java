@@ -50,12 +50,11 @@ public class TemplateServiceTest {
     up.userId = userId;
     userRepo.persist(up);
 
-    when(gitService.cloneShallow(any(), any(), any(Path.class), any()))
-        .thenAnswer(invocation -> {
-          Path dir = invocation.getArgument(2);
-          Files.createDirectories(dir);
-          return dir;
-        });
+    when(gitService.cloneShallow(any(), any(), any(Path.class), any())).thenAnswer(invocation -> {
+      Path dir = invocation.getArgument(2);
+      Files.createDirectories(dir);
+      return dir;
+    });
     doNothing().when(gitService).commitAndPush(any(Path.class), any(), any(), any(), any());
   }
 

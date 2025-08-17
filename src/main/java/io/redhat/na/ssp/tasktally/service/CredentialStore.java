@@ -8,8 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.jboss.logging.Logger;
 
 /**
- * Simple in-memory credential store used for testing. In production this would be backed
- * by Postgres and Flyway migrations.
+ * Simple in-memory credential store used for testing. In production this would be backed by Postgres and Flyway
+ * migrations.
  */
 @ApplicationScoped
 public class CredentialStore {

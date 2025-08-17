@@ -5,8 +5,8 @@ import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 
 public class VaultSecretWriter implements SecretWriter {
   @Override
-  public SshSecretRefs writeSshKey(String userId, String name, byte[] privateKeyPem,
-                                   byte[] publicKeyOpenSsh, char[] passphrase, byte[] knownHosts) {
+  public SshSecretRefs writeSshKey(String userId, String name, byte[] privateKeyPem, byte[] publicKeyOpenSsh,
+      char[] passphrase, byte[] knownHosts) {
     throw new UnsupportedOperationException("TODO");
   }
 

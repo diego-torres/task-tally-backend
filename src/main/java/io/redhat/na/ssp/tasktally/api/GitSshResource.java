@@ -18,8 +18,10 @@ import org.jboss.logging.Logger;
 @Consumes(MediaType.APPLICATION_JSON)
 public class GitSshResource {
   private static final Logger LOG = Logger.getLogger(GitSshResource.class);
-  @Inject SshGitService git;
-  @Inject CredentialStore store;
+  @Inject
+  SshGitService git;
+  @Inject
+  CredentialStore store;
 
   @POST
   @Path("/validate")
@@ -33,7 +35,8 @@ public class GitSshResource {
     CredentialRef cred = store.find(userId, req.credentialName).orElse(null);
     if (cred == null) {
       LOG.warnf("Credential %s not found for user %s", req.credentialName, userId);
-      return Response.status(Response.Status.BAD_REQUEST).entity(new ValidateResult(false, "Credential not found")).build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(new ValidateResult(false, "Credential not found"))
+          .build();
     }
     String uri = "git@" + req.provider + ".com:" + req.owner + "/" + req.repo + ".git";
     try {

@@ -12,4 +12,3 @@ public class VaultSecretResolver implements SecretResolver {
     throw new UnsupportedOperationException("Vault resolver not implemented");
   }
 }
-

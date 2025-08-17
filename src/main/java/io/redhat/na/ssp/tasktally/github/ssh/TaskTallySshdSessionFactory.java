@@ -26,9 +26,9 @@ public final class TaskTallySshdSessionFactory {
 
     // Optionally write passphrase to a file if needed (JGit does not support this directly)
 
-  SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();
-  builder.setHomeDirectory(tempDir.toFile());
-  builder.setSshDirectory(tempDir.toFile());
-  return builder.build(null);
+    SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();
+    builder.setHomeDirectory(tempDir.toFile());
+    builder.setSshDirectory(tempDir.toFile());
+    return builder.build(null);
   }
 }

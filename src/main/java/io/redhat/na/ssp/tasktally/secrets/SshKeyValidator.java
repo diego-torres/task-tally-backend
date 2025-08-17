@@ -7,7 +7,8 @@ public final class SshKeyValidator {
   private static final int MAX_KNOWN_HOSTS = 64 * 1024; // 64KB
   private static final int MAX_PASSPHRASE = 256; // 256B
 
-  private SshKeyValidator() {}
+  private SshKeyValidator() {
+  }
 
   public static void validatePrivateKey(byte[] pem) {
     if (pem == null || pem.length == 0) {

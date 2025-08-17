@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
 public class TestcontainersIntegrationTest {
-    @Test
-    void testContainerIsRunning() {
-        assertTrue(true, "Testcontainers integration is active");
-    }
+  @Test
+  void testContainerIsRunning() {
+    assertTrue(true, "Testcontainers integration is active");
+  }
 }
