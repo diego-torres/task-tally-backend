@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 public class KubernetesSecretWriterTest {
   @Test
   void writesSecretAndReturnsRefs() throws Exception {
-  Path base = Files.createTempDirectory("secrets");
-  KubernetesSecretWriter writer = new KubernetesSecretWriter(base.toString());
+    Path base = Files.createTempDirectory("secrets");
+    KubernetesSecretWriter writer = new KubernetesSecretWriter(base.toString());
     byte[] priv = "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----\n".getBytes(StandardCharsets.UTF_8);
     byte[] pub = "ssh-ed25519 AAAA".getBytes(StandardCharsets.UTF_8);
     byte[] kh = "github.com ssh-ed25519 AAAA".getBytes(StandardCharsets.UTF_8);
