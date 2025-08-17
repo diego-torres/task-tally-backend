@@ -9,34 +9,31 @@ import io.redhat.na.ssp.tasktally.service.PreferencesService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.RolesAllowed;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.redhat.na.ssp.tasktally.security.Identities;
 
 @Path("/api/preferences")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("user")
+@SecurityRequirement(name = "keycloak")
 public class PreferencesResource {
   private static final Logger LOG = Logger.getLogger(PreferencesResource.class);
 
   @Inject
   PreferencesService service;
 
-  private String userId(HttpHeaders headers) {
-    String id = headers.getHeaderString("X-User-Id");
-    if (id == null || id.isBlank()) {
-      LOG.warn("Missing X-User-Id header");
-      throw new NotAuthorizedException("X-User-Id required");
-    }
-    LOG.debugf("Resolved user id %s", id);
-    return id;
-  }
+  @Inject
+  SecurityIdentity identity;
 
   @GET
   @Path("/me")
-  public PreferencesDto get(@Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public PreferencesDto get() {
+    String uid = Identities.userId(identity);
     LOG.debugf("Fetching preferences for user %s", uid);
     UserPreferences up = service.getOrCreate(uid);
     PreferencesDto dto = new PreferencesDto();
@@ -49,8 +46,8 @@ public class PreferencesResource {
 
   @PUT
   @Path("/me")
-  public PreferencesDto update(@Valid PreferencesDto dto, @Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public PreferencesDto update(@Valid PreferencesDto dto) {
+    String uid = Identities.userId(identity);
     LOG.debugf("Updating preferences for user %s", uid);
     UserPreferences up = new UserPreferences();
     up.ui = dto.ui;
@@ -67,8 +64,8 @@ public class PreferencesResource {
 
   @POST
   @Path("/me/credentials")
-  public CredentialResponse addCredential(@Valid CredentialRequest req, @Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public CredentialResponse addCredential(@Valid CredentialRequest req) {
+    String uid = Identities.userId(identity);
     LOG.debugf("Adding credential %s for user %s", req.name, uid);
     CredentialRef ref = new CredentialRef();
     ref.name = req.name;
@@ -88,8 +85,8 @@ public class PreferencesResource {
 
   @DELETE
   @Path("/me/credentials/{name}")
-  public void delete(@PathParam("name") String name, @Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public void delete(@PathParam("name") String name) {
+    String uid = Identities.userId(identity);
     LOG.debugf("Deleting credential %s for user %s", name, uid);
     service.deleteCredential(uid, name);
     LOG.infof("Deleted credential %s for user %s", name, uid);

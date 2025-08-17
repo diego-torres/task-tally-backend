@@ -6,7 +6,6 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -20,17 +19,27 @@ import java.util.stream.Collectors;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.RolesAllowed;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.redhat.na.ssp.tasktally.security.Identities;
 
 @Path("/api/users/{userId}/ssh-keys")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@RolesAllowed("user")
+@SecurityRequirement(name = "keycloak")
 public class SshKeysResource {
   private static final Logger LOG = Logger.getLogger(SshKeysResource.class);
   @Inject
   SshKeyService service;
 
-  private void authorize(String pathUser, String headerUser) {
-    if (headerUser == null || headerUser.isBlank() || !headerUser.equals(pathUser)) {
+  @Inject
+  SecurityIdentity identity;
+
+  private void authorize(String pathUser) {
+    String tokenUser = Identities.userId(identity);
+    if (!tokenUser.equals(pathUser)) {
       throw new WebApplicationException("forbidden", Response.Status.FORBIDDEN);
     }
   }
@@ -50,17 +59,16 @@ public class SshKeysResource {
   @GET
   @Operation(summary = "List SSH keys for user")
   @APIResponse(responseCode = "200", description = "List of SSH credential references")
-  public List<CredentialDto> list(@PathParam("userId") String userId, @HeaderParam("X-User-Id") String header) {
-    authorize(userId, header);
+  public List<CredentialDto> list(@PathParam("userId") String userId) {
+    authorize(userId);
     return service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
   }
 
   @POST
   @Operation(summary = "Create SSH key for user")
   @APIResponse(responseCode = "201", description = "Created")
-  public Response create(@PathParam("userId") String userId, @HeaderParam("X-User-Id") String header,
-      SshKeyCreateRequest req) {
-    authorize(userId, header);
+  public Response create(@PathParam("userId") String userId, SshKeyCreateRequest req) {
+    authorize(userId);
     try {
       CredentialRef cred = service.create(userId, req);
       return Response.status(Response.Status.CREATED).entity(toDto(cred)).build();
@@ -75,9 +83,8 @@ public class SshKeysResource {
   @Path("/{name}")
   @Operation(summary = "Delete SSH key")
   @APIResponse(responseCode = "204", description = "Deleted")
-  public Response delete(@PathParam("userId") String userId, @HeaderParam("X-User-Id") String header,
-      @PathParam("name") String name) {
-    authorize(userId, header);
+  public Response delete(@PathParam("userId") String userId, @PathParam("name") String name) {
+    authorize(userId);
     try {
       service.delete(userId, name);
       return Response.noContent().build();
