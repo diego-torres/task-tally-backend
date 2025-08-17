@@ -170,3 +170,21 @@ Use SSH remote: `git@github.com:owner/repo.git`.
 
 ## Health
 Standard Quarkus health endpoints are exposed at `/q/health`.
+
+## Pre-commit Validation
+
+Before committing code, run the `pre-commit.sh` script to validate your changes. This script checks formatting, runs tests, and ensures code quality standards are met.
+
+To use it automatically before each commit, set up a Git pre-commit hook:
+
+```sh
+ln -s ../../pre-commit.sh .git/hooks/pre-commit
+```
+
+Or, run manually:
+
+```sh
+./pre-commit.sh
+```
+
+If the script fails, fix any reported issues before committing.
