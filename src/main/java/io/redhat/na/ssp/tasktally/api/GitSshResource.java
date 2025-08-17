@@ -35,7 +35,7 @@ public class GitSshResource {
     CredentialRef cred = store.find(userId, req.credentialName).orElse(null);
     if (cred == null) {
       LOG.warnf("Credential %s not found for user %s", req.credentialName, userId);
-      return Response.status(Response.Status.BAD_REQUEST).entity(new ValidateResult(false, "Credential not found"))
+      return Response.status(Response.Status.NOT_FOUND).entity(new ValidateResult(false, "Credential not found"))
           .build();
     }
     String uri = "git@" + req.provider + ".com:" + req.owner + "/" + req.repo + ".git";

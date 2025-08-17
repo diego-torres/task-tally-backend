@@ -84,34 +84,28 @@ curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
 
 ## Using SSH Keys
 
-Task‑tally can upload or generate SSH keys and keep the sensitive bytes in a
+Task‑tally can upload SSH keys and keep the sensitive bytes in a
 secret store. Postgres stores only references.
 
 1. **Upload an existing key**
    ```bash
-   curl -X POST $BASE/api/preferences/me/ssh-keys \
+   curl -X POST $BASE/api/users/user123/ssh-keys \
      -H "Content-Type: application/json" -H "X-User-Id: user123" \
      -d '{"name":"my-gh-key","provider":"github",\
           "privateKeyPem":"-----BEGIN OPENSSH PRIVATE KEY-----\\n...\\n-----END OPENSSH PRIVATE KEY-----\\n",\
           "knownHosts":"github.com ssh-ed25519 AAAA...\\n"}'
    ```
-2. **Generate a new key server side**
-   ```bash
-   curl -X POST $BASE/api/preferences/me/ssh-keys/generate \
-     -H "Content-Type: application/json" -H "X-User-Id: user123" \
-     -d '{"name":"gen-key","provider":"github"}'
-   ```
-3. **Register the public key** with GitHub/GitLab as a deploy key (allow write).
-4. **Provide known_hosts**
+2. **Register the public key** with GitHub/GitLab as a deploy key (allow write).
+3. **Provide known_hosts**
    ```bash
    ssh-keyscan -t ed25519 github.com >> known_hosts
    ```
-5. **Validate and delete**
+4. **Validate and delete**
    ```bash
    curl -X POST $BASE/api/git/ssh/validate -H "Content-Type: application/json" \
      -H "X-User-Id: user123" -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-key"}'
 
-   curl -X DELETE $BASE/api/preferences/me/ssh-keys/my-gh-key -H "X-User-Id: user123"
+   curl -X DELETE $BASE/api/users/user123/ssh-keys/my-gh-key -H "X-User-Id: user123"
    ```
 The backend loads private key material into memory only when performing Git
 operations and never stores raw secrets in Postgres.
