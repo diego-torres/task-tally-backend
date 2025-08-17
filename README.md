@@ -2,7 +2,6 @@
 
 
 Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and Git template operations over SSH.
-
 ## Quickstart: Local Development Environment
 
 ### 1. Start All Services with Docker Compose
@@ -23,7 +22,6 @@ podman compose logs -f
 The `init-vault.sh` script will automatically run in the `vault-init` service (see `docker-compose.yml`). It enables KV v2, writes a `tasktally` policy, and issues a dev token saved at `vault/bootstrap/dev-app-token.txt`.
 
 After containers are up, retrieve the token from `vault/bootstrap/dev-app-token.txt` and set it in your `src/main/resources/application.properties`:
-
 ```
 quarkus.vault.url=http://localhost:8200
 quarkus.vault.authentication=token
