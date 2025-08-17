@@ -37,8 +37,8 @@ public class SshKeysResourceTest {
   public void createListDelete() {
     cleanupUserKeys("u1");
     String body = "{\"name\":\"k1\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nAAA\\n----END OPENSSH PRIVATE KEY-----\\n\",\"knownHosts\":\"github.com ssh-ed25519 AAAA\\n\"}";
-    given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then()
-        .statusCode(201).body("secretRef", equalTo("kref"));
+    given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(201)
+        .body("secretRef", equalTo("kref"));
     given().get("/api/users/u1/ssh-keys").then().statusCode(200).body("", hasSize(1));
     given().delete("/api/users/u1/ssh-keys/k1").then().statusCode(204);
     given().get("/api/users/u1/ssh-keys").then().statusCode(200).body("", hasSize(0));
@@ -57,8 +57,8 @@ public class SshKeysResourceTest {
   @TestSecurity(user = "u1", roles = {"user"})
   public void oversizedKey400() {
     String big = "A".repeat(11 * 1024);
-    String body = "{\"name\":\"big\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----" +
-        big + "-----END OPENSSH PRIVATE KEY-----\"}";
+    String body = "{\"name\":\"big\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----"
+        + big + "-----END OPENSSH PRIVATE KEY-----\"}";
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(400);
   }
 
