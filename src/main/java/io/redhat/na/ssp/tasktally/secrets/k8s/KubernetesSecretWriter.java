@@ -2,20 +2,25 @@ package io.redhat.na.ssp.tasktally.secrets.k8s;
 
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import jakarta.enterprise.context.ApplicationScoped;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.Normalizer;
 
 /**
  * Writes SSH key material to a Kubernetes-style secret directory.
  */
+@ApplicationScoped
 public class KubernetesSecretWriter implements SecretWriter {
   private final Path basePath;
 
-  public KubernetesSecretWriter(Path basePath) {
-    this.basePath = basePath;
+  public KubernetesSecretWriter(@ConfigProperty(name = "secrets.base-path") String basePathString) {
+    this.basePath = Paths.get(basePathString);
   }
 
   @Override

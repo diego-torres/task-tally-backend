@@ -15,6 +15,14 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 public class SshKeysResourceTest {
+  private void cleanupUserKeys(String userId) {
+    // Get all keys for the user
+    var response = given().header("X-User-Id", userId).get("/api/users/" + userId + "/ssh-keys").then().extract().jsonPath().getList("name");
+    // Delete each key
+    for (Object key : response) {
+      given().header("X-User-Id", userId).delete("/api/users/" + userId + "/ssh-keys/" + key).then().statusCode(204);
+    }
+  }
 
   @InjectMock
   SecretWriter writer;
@@ -23,6 +31,7 @@ public class SshKeysResourceTest {
   public void setup() {
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any()))
         .thenReturn(new SshSecretRefs("kref", "href", null));
+    cleanupUserKeys("u1");
   }
 
   @Test
