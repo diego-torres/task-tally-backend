@@ -11,15 +11,19 @@ import io.redhat.na.ssp.tasktally.service.PreferencesService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import org.jboss.logging.Logger;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.RolesAllowed;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.redhat.na.ssp.tasktally.security.Identities;
 
 @Path("/api/git")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("user")
+@SecurityRequirement(name = "keycloak")
 public class GitResource {
   private static final Logger LOG = Logger.getLogger(GitResource.class);
 
@@ -29,20 +33,13 @@ public class GitResource {
   @Inject
   TemplateService templateService;
 
-  private String userId(HttpHeaders headers) {
-    String id = headers.getHeaderString("X-User-Id");
-    if (id == null || id.isBlank()) {
-      LOG.warn("Missing X-User-Id header");
-      throw new NotAuthorizedException("X-User-Id required");
-    }
-    LOG.debugf("Resolved user id %s", id);
-    return id;
-  }
+  @Inject
+  SecurityIdentity identity;
 
   @POST
   @Path("/link")
-  public CredentialResponse link(@Valid GitLinkRequest req, @Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public CredentialResponse link(@Valid GitLinkRequest req) {
+    String uid = Identities.userId(identity);
     LOG.debugf("Linking credential %s for user %s", req.name, uid);
     CredentialRef ref = new CredentialRef();
     ref.name = req.name;
@@ -60,8 +57,8 @@ public class GitResource {
 
   @POST
   @Path("/templates/pull")
-  public List<ProjectTemplate> pullTemplates(@Valid TemplatePullRequest req, @Context HttpHeaders headers) {
-    String uid = userId(headers);
+  public List<ProjectTemplate> pullTemplates(@Valid TemplatePullRequest req) {
+    String uid = Identities.userId(identity);
     LOG.debugf("Pulling templates from %s for user %s", req.repoUri, uid);
     List<ProjectTemplate> templates = templateService.pullTemplates(uid, req);
     LOG.infof("Pulled %d templates for user %s", templates.size(), uid);
@@ -70,7 +67,7 @@ public class GitResource {
 
   @POST
   @Path("/templates/push")
-  public void pushTemplates(@Valid TemplatePushRequest req, @Context HttpHeaders headers) {
+  public void pushTemplates(@Valid TemplatePushRequest req) {
     LOG.error("Template push not implemented");
     throw new UnsupportedOperationException("TODO");
   }

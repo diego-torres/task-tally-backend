@@ -7,15 +7,19 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.nio.file.Files;
 import org.jboss.logging.Logger;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.RolesAllowed;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.redhat.na.ssp.tasktally.security.Identities;
 
 @Path("/api/git/ssh")
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("user")
+@SecurityRequirement(name = "keycloak")
 public class GitSshResource {
   private static final Logger LOG = Logger.getLogger(GitSshResource.class);
   @Inject
@@ -23,14 +27,13 @@ public class GitSshResource {
   @Inject
   CredentialStore store;
 
+  @Inject
+  SecurityIdentity identity;
+
   @POST
   @Path("/validate")
-  public Response validate(ValidateRequest req, @Context HttpHeaders headers) {
-    String userId = headers.getHeaderString("X-User-Id");
-    if (userId == null || userId.isBlank()) {
-      LOG.warn("Missing X-User-Id header");
-      return Response.status(Response.Status.UNAUTHORIZED).build();
-    }
+  public Response validate(ValidateRequest req) {
+    String userId = Identities.userId(identity);
     LOG.debugf("Validating SSH credential %s for user %s", req.credentialName, userId);
     CredentialRef cred = store.find(userId, req.credentialName).orElse(null);
     if (cred == null) {

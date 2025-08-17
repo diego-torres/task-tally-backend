@@ -10,18 +10,36 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.RolesAllowed;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.redhat.na.ssp.tasktally.security.Identities;
+import jakarta.ws.rs.ForbiddenException;
 
 @Path("/api/users/{userId}/templates")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("user")
+@SecurityRequirement(name = "keycloak")
 public class TemplateResource {
   private static final Logger LOG = Logger.getLogger(TemplateResource.class);
 
   @Inject
   TemplateService service;
 
+  @Inject
+  SecurityIdentity identity;
+
+  private void authorize(String pathUser) {
+    String tokenUser = Identities.userId(identity);
+    if (!tokenUser.equals(pathUser)) {
+      throw new ForbiddenException("not your resource");
+    }
+  }
+
   @GET
   public List<TemplateDto> list(@PathParam("userId") String userId) {
+    authorize(userId);
     LOG.debugf("Listing templates for user %s", userId);
     List<TemplateDto> list = service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
     LOG.infof("Retrieved %d templates for user %s", list.size(), userId);
@@ -30,6 +48,7 @@ public class TemplateResource {
 
   @POST
   public TemplateDto create(@PathParam("userId") String userId, @Valid TemplateDto dto) {
+    authorize(userId);
     LOG.debugf("Creating template %s for user %s", dto.name, userId);
     Template tmpl = fromDto(dto);
     Template saved = service.create(userId, tmpl);
@@ -40,6 +59,7 @@ public class TemplateResource {
   @PUT
   @Path("/{id}")
   public TemplateDto update(@PathParam("userId") String userId, @PathParam("id") Long id, @Valid TemplateDto dto) {
+    authorize(userId);
     LOG.debugf("Updating template %d for user %s", id, userId);
     Template tmpl = fromDto(dto);
     Template updated = service.update(userId, id, tmpl);
@@ -50,6 +70,7 @@ public class TemplateResource {
   @DELETE
   @Path("/{id}")
   public void delete(@PathParam("userId") String userId, @PathParam("id") Long id) {
+    authorize(userId);
     LOG.debugf("Deleting template %d for user %s", id, userId);
     service.delete(userId, id);
     LOG.infof("Deleted template %d for user %s", id, userId);

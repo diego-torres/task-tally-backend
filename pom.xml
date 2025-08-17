@@ -76,6 +76,14 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-rest-jackson</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-oidc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-security</artifactId>
+    </dependency>
     <!-- Swagger UI / OpenAPI for Quarkus -->
     <dependency>
       <groupId>io.quarkus</groupId>

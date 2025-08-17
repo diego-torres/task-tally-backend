@@ -58,18 +58,17 @@ services:
       KC_DB_URL_DATABASE: tasktally
       KC_DB_USERNAME: tasktally
       KC_DB_PASSWORD: tasktally
-      KC_HTTP_PORT: 8081
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
-      - "8081:8081"
+      - "8080:8080"
     depends_on:
       - postgres
-    command: start-dev --http-port=8081
+    command: start-dev
     volumes:
       - ./init-keycloak.sh:/opt/keycloak/init-keycloak.sh
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 5s
       timeout: 3s
       retries: 20

@@ -38,26 +38,42 @@ The application will connect to the Postgres and Vault instances started above.
 
 ### 4. Keycloak Authentication Service
 
-The `keycloak` container provides OpenID Connect authentication for local development. It is automatically initialized with a public client using the `keycloak-init` service and the `init-keycloak.sh` script.
+The `keycloak` container provides OpenID Connect authentication for local development. It is initialized with realm `tasktally`, a confidential client `task-tally-backend` (API audience) and a public client `task-tally-swagger` for Swagger‑UI.
 
 - **Admin credentials:**
   - Username: `admin`
   - Password: `admin`
-- **Client configuration:**
-  - Type: OpenID Connect, Public
-  - Standard Flow enabled; PKCE S256 required
-  - Valid Redirect URIs: `http://localhost:9000/*`
-  - Web Origins: `http://localhost:9000`
+- **Realm:** `tasktally`
+- **Clients:**
+  - `task-tally-backend` – service, bearer-only
+  - `task-tally-swagger` – public, redirect `http://localhost:8080/q/swagger-ui/oauth2-redirect.html`
+- **Test users:** `alice`/`alice` (role `user`), `admin`/`admin` (roles `user,admin`)
 
-The client is created automatically when the containers start. You can modify the initialization script (`init-keycloak.sh`) to change client settings or add more clients.
-
-To access the Keycloak admin console:
+Access the admin console at:
 
 ```
-http://localhost:8081
+http://localhost:8080
 ```
 
 Login with the admin credentials above.
+
+## Auth with Keycloak (dev)
+
+```
+# 1) Start services
+podman compose up -d
+
+# 2) Run the API
+./mvnw quarkus:dev
+
+# 3) Get a token (alice)
+ACCESS_TOKEN=$(curl -s -X POST 'http://localhost:8080/realms/tasktally/protocol/openid-connect/token' \
+  -H 'content-type: application/x-www-form-urlencoded' \
+  -d 'grant_type=password&client_id=task-tally-swagger&username=alice&password=alice' | jq -r .access_token)
+
+# 4) Call the API
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/preferences/me
+```
 
 ---
 
@@ -89,18 +105,18 @@ Assuming the application runs on `localhost:8080`.
 
 ```bash
 # Get preferences
-curl -H 'X-User-Id: u1' http://localhost:8080/api/preferences/me
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/preferences/me
 
 # Upsert preferences
-curl -X PUT -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
+curl -X PUT -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
   -d '{"ui":{"theme":"dark"}}' http://localhost:8080/api/preferences/me
 
 # Link SSH credential (optional; defaults to `~/.ssh/id_rsa`)
-curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"ssh","ref":"k8s:secret/mysecret#id_ed25519","scope":"write"}' http://localhost:8080/api/git/link
 
 # Pull templates via SSH
-curl -X POST -H 'X-User-Id: u1' -H 'Content-Type: application/json' \
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
   -d '{"repoUri":"git@github.com:o/r.git","path":"templates","branch":"main"}' \
   http://localhost:8080/api/git/templates/pull
 ```
@@ -113,7 +129,7 @@ secret store. Postgres stores only references.
 1. **Upload an existing key**
    ```bash
    curl -X POST $BASE/api/users/user123/ssh-keys \
-     -H "Content-Type: application/json" -H "X-User-Id: user123" \
+     -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN" \
      -d '{"name":"my-gh-key","provider":"github",\
           "privateKeyPem":"-----BEGIN OPENSSH PRIVATE KEY-----\\n...\\n-----END OPENSSH PRIVATE KEY-----\\n",\
           "knownHosts":"github.com ssh-ed25519 AAAA...\\n"}'
@@ -126,10 +142,10 @@ secret store. Postgres stores only references.
 4. **Validate and delete**
    ```bash
    curl -X POST $BASE/api/git/ssh/validate -H "Content-Type: application/json" \
-     -H "X-User-Id: user123" -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-key"}'
+     -H "Authorization: Bearer $ACCESS_TOKEN" -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-key"}'
 
-   curl -X DELETE $BASE/api/users/user123/ssh-keys/my-gh-key -H "X-User-Id: user123"
-   ```
+   curl -X DELETE $BASE/api/users/user123/ssh-keys/my-gh-key -H "Authorization: Bearer $ACCESS_TOKEN"
+  ```
 The backend loads private key material into memory only when performing Git
 operations and never stores raw secrets in Postgres.
 
@@ -162,7 +178,7 @@ ssh-keyscan -t ed25519 gitlab.com >> known_hosts
 
 5. **Link credential**
 ```bash
-curl -X POST $BASE/api/preferences/me/credentials   -H "Content-Type: application/json" -H "X-User-Id: user123"   -d '{
+curl -X POST $BASE/api/preferences/me/credentials   -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN"   -d '{
       "name":"my-gh-deploy-key",
       "provider":"github",
       "scope":"write",
@@ -173,7 +189,7 @@ curl -X POST $BASE/api/preferences/me/credentials   -H "Content-Type: applicatio
 
 6. **Validate SSH**
 ```bash
-curl -X POST $BASE/api/git/ssh/validate   -H "Content-Type: application/json" -H "X-User-Id: user123"   -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-deploy-key"}'
+curl -X POST $BASE/api/git/ssh/validate   -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN"   -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-deploy-key"}'
 ```
 
 7. **Push templates/proposals**
