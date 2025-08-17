@@ -2,6 +2,8 @@ package io.redhat.na.ssp.tasktally.service;
 
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +31,23 @@ public class CredentialStore {
       LOG.warnf("Credential %s for user %s not found", name, userId);
     }
     return Optional.ofNullable(cred);
+  }
+
+  public List<CredentialRef> list(String userId) {
+    LOG.debugf("Listing credentials for user %s", userId);
+    List<CredentialRef> creds = new ArrayList<>();
+    String prefix = userId + ":";
+    for (Map.Entry<String, CredentialRef> e : store.entrySet()) {
+      if (e.getKey().startsWith(prefix)) {
+        creds.add(e.getValue());
+      }
+    }
+    return creds;
+  }
+
+  public void remove(String userId, String name) {
+    LOG.debugf("Removing credential %s for user %s", name, userId);
+    store.remove(key(userId, name));
   }
 
   private String key(String userId, String name) {
