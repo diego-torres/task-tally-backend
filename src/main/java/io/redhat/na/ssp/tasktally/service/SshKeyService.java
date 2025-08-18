@@ -1,5 +1,23 @@
 package io.redhat.na.ssp.tasktally.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+import org.apache.sshd.common.config.keys.PublicKeyEntry;
+import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
+import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
+import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
+import org.apache.sshd.common.util.io.resource.IoResource;
+import org.jboss.logging.Logger;
+
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
 import io.redhat.na.ssp.tasktally.api.SshKeyGenerateRequest;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
@@ -9,23 +27,6 @@ import io.redhat.na.ssp.tasktally.secrets.SshKeyValidator;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.GeneralSecurityException;
-import java.io.IOException;
-import org.apache.sshd.common.config.keys.PublicKeyEntry;
-import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
-import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
-import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
-import org.apache.sshd.common.util.io.resource.IoResource;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class SshKeyService {
@@ -116,7 +117,8 @@ public class SshKeyService {
     SshKeyValidator.validatePassphrase(pp);
 
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
+      net.i2p.crypto.eddsa.KeyPairGenerator kpg = new net.i2p.crypto.eddsa.KeyPairGenerator();
+      kpg.initialize(new net.i2p.crypto.eddsa.spec.EdDSAGenParameterSpec("Ed25519"), new java.security.SecureRandom());
       KeyPair kp = kpg.generateKeyPair();
 
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
