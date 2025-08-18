@@ -3,14 +3,20 @@ package io.redhat.na.ssp.tasktally.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
+import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +32,14 @@ public class SshKeysResourceTest {
   @InjectMock
   SecretWriter writer;
 
+  @InjectMock
+  SecretResolver resolver;
+
   @BeforeEach
   public void setup() {
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any()))
         .thenReturn(new SshSecretRefs("kref", "href", null));
+    when(resolver.resolveBytes(anyString())).thenReturn(new byte[0]);
   }
 
   @Test
@@ -72,5 +82,40 @@ public class SshKeysResourceTest {
   @Test
   public void missingToken401() {
     given().get("/api/users/u1/ssh-keys").then().statusCode(401);
+  }
+
+  @Test
+  @TestSecurity(user = "u1", roles = {"user"})
+  public void generateAndFetchPublicKey() {
+    cleanupUserKeys("u1");
+    AtomicReference<byte[]> pub = new AtomicReference<>();
+    when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+      pub.set(inv.getArgument(3));
+      return new SshSecretRefs("k8s:secret/agent-key#id_ed25519", null, null);
+    });
+    when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
+
+    String body = "{\"name\":\"agent-key\",\"provider\":\"github\",\"comment\":\"task-tally@u1\"}";
+    given().contentType("application/json").body(body)
+        .post("/api/users/u1/ssh-keys/generate").then().statusCode(201).body("name", equalTo("agent-key"))
+        .body("provider", equalTo("github"));
+
+    given().get("/api/users/u1/ssh-keys/agent-key/public").then().statusCode(200)
+        .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(isEmptyOrNullString()))
+        .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
+  }
+
+  @Test
+  @TestSecurity(user = "u2", roles = {"user"})
+  public void generatePathMismatch403() {
+    String body = "{\"name\":\"agent\",\"provider\":\"github\"}";
+    given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys/generate").then().statusCode(403);
+  }
+
+  @Test
+  @TestSecurity(user = "u1", roles = {"user"})
+  public void publicKeyNotFound404() {
+    cleanupUserKeys("u1");
+    given().get("/api/users/u1/ssh-keys/missing/public").then().statusCode(404);
   }
 }
