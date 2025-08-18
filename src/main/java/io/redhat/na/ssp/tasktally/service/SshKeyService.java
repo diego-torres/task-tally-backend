@@ -136,7 +136,13 @@ public class SshKeyService {
     }
 
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519", "EdDSA");
+      KeyPairGenerator kpg;
+      try {
+        kpg = KeyPairGenerator.getInstance("Ed25519");
+      } catch (GeneralSecurityException ignore) {
+        // fallback to EdDSA provider if default not available
+        kpg = KeyPairGenerator.getInstance("Ed25519", "EdDSA");
+      }
       KeyPair kp = kpg.generateKeyPair();
       byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
