@@ -15,7 +15,10 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Base64;
 import java.util.stream.Collectors;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
@@ -70,6 +73,26 @@ public class SshKeysResource {
   }
 
   @POST
+  @Path("/generate")
+  @Operation(summary = "Generate SSH keypair for user")
+  @APIResponse(responseCode = "201", description = "Created")
+  public Response generate(@PathParam("userId") String userId, SshKeyGenerateRequest req) {
+    LOG.infof("Generating SSH key for user: %s", userId);
+    authorize(userId);
+    try {
+      CredentialRef cred = service.generate(userId, req);
+      LOG.infof("SSH key generated for user: %s, key name: %s", userId, cred.name);
+      return Response.status(Response.Status.CREATED).entity(toDto(cred)).build();
+    } catch (IllegalStateException e) {
+      LOG.errorf("Failed to generate SSH key for user: %s due to state error: %s", userId, e.getMessage());
+      throw new WebApplicationException(e.getMessage(), Response.Status.CONFLICT);
+    } catch (IllegalArgumentException e) {
+      LOG.errorf("Failed to generate SSH key for user: %s due to argument error: %s", userId, e.getMessage());
+      throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
+    }
+  }
+
+  @POST
   @Operation(summary = "Create SSH key for user")
   @APIResponse(responseCode = "201", description = "Created")
   public Response create(@PathParam("userId") String userId, SshKeyCreateRequest req) {
@@ -102,6 +125,41 @@ public class SshKeysResource {
     } catch (IllegalArgumentException e) {
       LOG.errorf("Failed to delete SSH key for user: %s, key name: %s. Reason: %s", userId, name, e.getMessage());
       throw new NotFoundException();
+    }
+  }
+
+  @GET
+  @Path("/{name}/public")
+  @Operation(summary = "Get OpenSSH public key for credential")
+  public SshPublicKeyResponse publicKey(@PathParam("userId") String userId, @PathParam("name") String name) {
+    LOG.infof("Fetching public SSH key for user: %s, key name: %s", userId, name);
+    authorize(userId);
+    try {
+      CredentialRef cred = service.get(userId, name);
+      String pk = service.getPublicKey(cred);
+      SshPublicKeyResponse out = new SshPublicKeyResponse();
+      out.name = cred.name;
+      out.provider = cred.provider;
+      out.publicKey = pk;
+      out.fingerprintSha256 = sshSha256(pk);
+      return out;
+    } catch (IllegalArgumentException e) {
+      LOG.errorf("Public key not found for user: %s, key name: %s", userId, name);
+      throw new NotFoundException();
+    } catch (IllegalStateException e) {
+      LOG.errorf("Failed to fetch public key for user: %s, key name: %s. Reason: %s", userId, name, e.getMessage());
+      throw new WebApplicationException(e.getMessage(), Response.Status.NOT_IMPLEMENTED);
+    }
+  }
+
+  static String sshSha256(String publicKeyLine) {
+    String[] parts = publicKeyLine.trim().split("\\s+");
+    byte[] blob = Base64.getDecoder().decode(parts[1]);
+    try {
+      var md = MessageDigest.getInstance("SHA-256");
+      return Base64.getEncoder().encodeToString(md.digest(blob));
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
     }
   }
 }
