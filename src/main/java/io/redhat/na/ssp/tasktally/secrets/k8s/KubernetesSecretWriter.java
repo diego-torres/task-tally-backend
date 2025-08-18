@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.Normalizer;
+import java.util.Arrays;
 
 /**
  * Writes SSH key material to a Kubernetes-style secret directory.
@@ -33,13 +34,13 @@ public class KubernetesSecretWriter implements SecretWriter {
       Files.createDirectories(dir);
       Files.write(dir.resolve("id_ed25519"), privateKeyPem);
       if (publicKeyOpenSsh != null) {
-        Files.write(dir.resolve("id_ed25519.pub"), publicKeyOpenSsh);
+        Files.write(dir.resolve("id_ed25519.pub"), ensureNewline(publicKeyOpenSsh));
       }
       if (passphrase != null) {
         Files.writeString(dir.resolve("passphrase"), new String(passphrase), StandardCharsets.UTF_8);
       }
       if (knownHosts != null) {
-        Files.write(dir.resolve("known_hosts"), knownHosts);
+        Files.write(dir.resolve("known_hosts"), ensureNewline(knownHosts));
       }
     } catch (IOException e) {
       throw new RuntimeException("Failed to write secret", e);
@@ -71,5 +72,14 @@ public class KubernetesSecretWriter implements SecretWriter {
   private String slug(String in) {
     String norm = Normalizer.normalize(in, Normalizer.Form.NFD).replaceAll("[^A-Za-z0-9]", "-").toLowerCase();
     return norm.replaceAll("-+", "-");
+  }
+
+  private byte[] ensureNewline(byte[] data) {
+    if (data.length == 0 || data[data.length - 1] == '\n') {
+      return data;
+    }
+    byte[] out = Arrays.copyOf(data, data.length + 1);
+    out[data.length] = (byte) '\n';
+    return out;
   }
 }
