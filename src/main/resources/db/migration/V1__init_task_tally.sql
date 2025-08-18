@@ -1,5 +1,6 @@
 -- Create extensions (safe if already present)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE SCHEMA IF NOT EXISTS tasktally;
 
 -- user_preferences table
 CREATE TABLE IF NOT EXISTS tasktally.user_preferences (
