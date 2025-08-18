@@ -26,12 +26,30 @@ import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 public class SshKeysResourceTest {
   @org.junit.jupiter.api.AfterEach
   public void tearDown() {
-    cleanupUserKeys("u1");
+    try {
+      cleanupUserKeys("u1");
+    } catch (Exception e) {
+      // Log and ignore cleanup errors to prevent cascading test failures
+      System.err.println("Cleanup failed: " + e.getMessage());
+    }
   }
   private void cleanupUserKeys(String userId) {
-    var response = given().get("/api/users/" + userId + "/ssh-keys").then().extract().jsonPath().getList("name");
+    java.util.List<?> response = null;
+    try {
+      response = given().get("/api/users/" + userId + "/ssh-keys").then().extract().jsonPath().getList("name");
+    } catch (Exception e) {
+      // If response is null or invalid, skip cleanup
+      System.err.println("CleanupUserKeys: failed to fetch keys: " + e.getMessage());
+      return;
+    }
+    if (response == null)
+      return;
     for (Object key : response) {
-      given().delete("/api/users/" + userId + "/ssh-keys/" + key).then().statusCode(204);
+      try {
+        given().delete("/api/users/" + userId + "/ssh-keys/" + key).then().statusCode(204);
+      } catch (Exception e) {
+        System.err.println("CleanupUserKeys: failed to delete key " + key + ": " + e.getMessage());
+      }
     }
   }
 

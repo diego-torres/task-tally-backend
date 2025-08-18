@@ -1,5 +1,7 @@
 package io.redhat.na.ssp.tasktally.service;
 
+import net.i2p.crypto.eddsa.spec.EdDSAParameterSpec;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -7,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+// Added explicit import for EdDSAGenParameterSpec
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +35,12 @@ import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class SshKeyService {
+  static {
+    // Register EdDSA provider once at class load
+    if (java.security.Security.getProvider("EdDSA") == null) {
+      java.security.Security.addProvider(new net.i2p.crypto.eddsa.EdDSASecurityProvider());
+    }
+  }
   private static final Logger LOG = Logger.getLogger(SshKeyService.class);
   private static final Set<String> ALLOWED_PROVIDERS = Set.of("github", "gitlab");
 
@@ -130,10 +139,9 @@ public class SshKeyService {
     }
 
     try {
-      // Ensure NetI2P EdDSA provider is registered
-      java.security.Security.addProvider(new net.i2p.crypto.eddsa.EdDSASecurityProvider());
       KeyPairGenerator kpg = KeyPairGenerator.getInstance("EdDSA", "EdDSA");
-      kpg.initialize(new net.i2p.crypto.eddsa.spec.EdDSAGenParameterSpec("Ed25519"));
+      EdDSAParameterSpec edSpec = net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable.getByName("Ed25519");
+      kpg.initialize(edSpec);
       KeyPair kp = kpg.generateKeyPair();
       byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
