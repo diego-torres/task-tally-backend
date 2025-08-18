@@ -1,7 +1,5 @@
 package io.redhat.na.ssp.tasktally.service;
 
-import net.i2p.crypto.eddsa.spec.EdDSAParameterSpec;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -9,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-// Added explicit import for EdDSAGenParameterSpec
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -139,9 +136,7 @@ public class SshKeyService {
     }
 
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("EdDSA", "EdDSA");
-      EdDSAParameterSpec edSpec = net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable.getByName("Ed25519");
-      kpg.initialize(edSpec);
+      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519", "EdDSA");
       KeyPair kp = kpg.generateKeyPair();
       byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
