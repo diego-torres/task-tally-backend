@@ -67,16 +67,10 @@ services:
     command: start-dev
     volumes:
       - ./init-keycloak.sh:/opt/keycloak/init-keycloak.sh
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
   keycloak-init:
     image: quay.io/keycloak/keycloak:24.0.4
     depends_on:
-      keycloak:
-        condition: service_healthy
+      - keycloak
     entrypoint: ["/bin/bash", "/opt/keycloak/init-keycloak.sh"]
     volumes:
       - ./init-keycloak.sh:/opt/keycloak/init-keycloak.sh

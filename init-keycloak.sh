@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Wait for Keycloak to be ready
-until curl -sf http://keycloak:8080/health/ready | grep '"status":"UP"' > /dev/null; do
+# Wait for Keycloak to be ready (using Bash TCP port check)
+until echo > /dev/tcp/keycloak/8080 2>/dev/null; do
   echo "Waiting for Keycloak to be ready..."
   sleep 3
 done
