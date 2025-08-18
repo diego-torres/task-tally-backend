@@ -22,6 +22,12 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 public class SshKeyServiceTest {
+  @org.junit.jupiter.api.AfterEach
+  public void tearDown() {
+    for (CredentialRef cred : store.list("u1")) {
+      store.remove("u1", cred.name);
+    }
+  }
 
   @Inject
   SshKeyService service;
@@ -45,13 +51,6 @@ public class SshKeyServiceTest {
     assertEquals("ref1", cred.secretRef);
     assertEquals(1, store.list("u1").size());
     verify(writer).writeSshKey(any(), any(), any(), any(), any(), any());
-  }
-  @org.junit.jupiter.api.AfterEach
-  public void tearDown() {
-    // Remove all credentials for user u1 after each test
-    for (CredentialRef cred : store.list("u1")) {
-      store.remove("u1", cred.name);
-    }
   }
 
   @Test

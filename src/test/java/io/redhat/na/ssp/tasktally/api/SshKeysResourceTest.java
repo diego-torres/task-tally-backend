@@ -24,6 +24,10 @@ import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 
 @QuarkusTest
 public class SshKeysResourceTest {
+  @org.junit.jupiter.api.AfterEach
+  public void tearDown() {
+    cleanupUserKeys("u1");
+  }
   private void cleanupUserKeys(String userId) {
     var response = given().get("/api/users/" + userId + "/ssh-keys").then().extract().jsonPath().getList("name");
     for (Object key : response) {
@@ -91,7 +95,7 @@ public class SshKeysResourceTest {
   public void generateAndFetchPublicKey() {
     cleanupUserKeys("u1");
     AtomicReference<byte[]> pub = new AtomicReference<>();
-    String uniqueName = "agent-key-" + System.currentTimeMillis();
+    String uniqueName = "agent-key-" + java.util.UUID.randomUUID();
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
       pub.set(inv.getArgument(3));
       return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_ed25519", null, null);
