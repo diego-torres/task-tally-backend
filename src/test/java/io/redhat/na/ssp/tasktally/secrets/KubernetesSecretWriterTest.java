@@ -28,5 +28,9 @@ public class KubernetesSecretWriterTest {
     assertArrayEquals(priv, resolved);
     assertEquals("k8s:secret/tasktally-ssh-u1-my-key#id_ed25519", refs.privateKeyRef());
     assertEquals("k8s:secret/tasktally-ssh-u1-my-key#known_hosts", refs.knownHostsRef());
+    String pubFile = Files.readString(base.resolve("tasktally-ssh-u1-my-key").resolve("id_ed25519.pub"));
+    assertTrue(pubFile.endsWith("\n"));
+    String khFile = Files.readString(base.resolve("tasktally-ssh-u1-my-key").resolve("known_hosts"));
+    assertTrue(khFile.endsWith("\n"));
   }
 }

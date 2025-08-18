@@ -88,7 +88,13 @@ public class SshKeysResource {
       throw new WebApplicationException(e.getMessage(), Response.Status.CONFLICT);
     } catch (IllegalArgumentException e) {
       LOG.errorf("Failed to generate SSH key for user: %s due to argument error: %s", userId, e.getMessage());
-      throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
+      String code = "SSH_KEY_WRITE_FAILED";
+      if ("passphrase required".equalsIgnoreCase(e.getMessage())) {
+        code = "SSH_PASSPHRASE_REQUIRED";
+      }
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(java.util.Map.of("code", code, "message", e.getMessage()))
+          .build();
     }
   }
 
@@ -136,7 +142,7 @@ public class SshKeysResource {
     authorize(userId);
     try {
       CredentialRef cred = service.get(userId, name);
-      String pk = service.getPublicKey(cred);
+      String pk = service.getPublicKey(userId, name);
       SshPublicKeyResponse out = new SshPublicKeyResponse();
       out.name = cred.name;
       out.provider = cred.provider;

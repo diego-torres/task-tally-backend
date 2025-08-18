@@ -6,15 +6,19 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.sshd.common.cipher.BuiltinCiphers;
 import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
+import org.apache.sshd.common.config.keys.loader.openssh.kdf.BCryptKdfOptions;
 import org.apache.sshd.common.util.io.resource.IoResource;
 import org.jboss.logging.Logger;
 
@@ -27,6 +31,7 @@ import io.redhat.na.ssp.tasktally.secrets.SshKeyValidator;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class SshKeyService {
@@ -39,6 +44,12 @@ public class SshKeyService {
   CredentialStore store;
   @Inject
   SecretResolver secretResolver;
+
+  @ConfigProperty(name = "ssh.kdf.rounds", defaultValue = "16")
+  int kdfRounds;
+
+  @ConfigProperty(name = "ssh.encryption.required", defaultValue = "false")
+  boolean encryptionRequired;
 
   public List<CredentialRef> list(String userId) {
     return store.list(userId);
@@ -61,7 +72,7 @@ public class SshKeyService {
     }
     byte[] priv = req.privateKeyPem != null ? req.privateKeyPem.getBytes(StandardCharsets.UTF_8) : null;
     SshKeyValidator.validatePrivateKey(priv);
-    byte[] kh = req.knownHosts != null ? req.knownHosts.getBytes(StandardCharsets.UTF_8) : null;
+    byte[] kh = req.knownHosts != null ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8) : null;
     SshKeyValidator.validateKnownHosts(kh);
     char[] pp = req.passphrase != null ? req.passphrase.toCharArray() : null;
     SshKeyValidator.validatePassphrase(pp);
@@ -111,30 +122,23 @@ public class SshKeyService {
     if (provider == null || !ALLOWED_PROVIDERS.contains(provider)) {
       throw new IllegalArgumentException("provider must be github or gitlab");
     }
-    byte[] kh = req.knownHosts != null ? req.knownHosts.getBytes(StandardCharsets.UTF_8) : null;
-    SshKeyValidator.validateKnownHosts(kh);
+    byte[] khRaw = req.knownHosts != null ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8) : null;
+    SshKeyValidator.validateKnownHosts(khRaw);
     char[] pp = req.passphrase != null ? req.passphrase.toCharArray() : null;
     SshKeyValidator.validatePassphrase(pp);
+    if (encryptionRequired && (pp == null || pp.length == 0)) {
+      throw new IllegalArgumentException("passphrase required");
+    }
 
     try {
-      net.i2p.crypto.eddsa.KeyPairGenerator kpg = new net.i2p.crypto.eddsa.KeyPairGenerator();
-      kpg.initialize(new net.i2p.crypto.eddsa.spec.EdDSAGenParameterSpec("Ed25519"), new java.security.SecureRandom());
+      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
       KeyPair kp = kpg.generateKeyPair();
+      byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
-      ByteArrayOutputStream bos = new ByteArrayOutputStream();
-      OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
-      if (pp != null && pp.length > 0) {
-        enc.setPassword(new String(pp));
-      }
-      new OpenSSHKeyPairResourceWriter().writePrivateKey(kp, null, enc, bos);
-      byte[] privateOpenSsh = bos.toByteArray();
+      String publicLine = buildOpenSshPublic(kp.getPublic(), userId, req.comment);
+      byte[] publicOpenSsh = (publicLine + "\n").getBytes(StandardCharsets.UTF_8);
 
-      String pub = PublicKeyEntry.toString(kp.getPublic());
-      String comment = (req.comment == null || req.comment.isBlank()) ? "task-tally@" + userId : req.comment.trim();
-      String publicOpenSsh = pub + " " + comment;
-
-      SshSecretRefs refs = secretWriter.writeSshKey(userId, name, privateOpenSsh,
-          publicOpenSsh.getBytes(StandardCharsets.UTF_8), pp, kh);
+      SshSecretRefs refs = secretWriter.writeSshKey(userId, name, privateOpenSsh, publicOpenSsh, pp, khRaw);
 
       CredentialRef cred = new CredentialRef();
       cred.name = name;
@@ -153,10 +157,6 @@ public class SshKeyService {
 
   public String getPublicKey(String userId, String name) {
     CredentialRef cred = get(userId, name);
-    return getPublicKey(cred);
-  }
-
-  public String getPublicKey(CredentialRef cred) {
     String privRef = cred.secretRef;
     if (privRef == null) {
       throw new IllegalStateException("missing secret ref");
@@ -166,23 +166,63 @@ public class SshKeyService {
       try {
         byte[] pub = secretResolver.resolveBytes(pubRef);
         if (pub != null && pub.length > 0) {
-          return new String(pub, StandardCharsets.UTF_8);
+          return new String(pub, StandardCharsets.UTF_8).trim();
         }
       } catch (Exception e) {
         // ignore and fallback
       }
       try {
         byte[] priv = secretResolver.resolveBytes(privRef);
-        Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null, // SessionContext
-            (IoResource<?>) new ByteArrayInputStream(priv), // InputStream
-            null // FilePasswordProvider
-        );
+        Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null,
+            (IoResource<?>) new ByteArrayInputStream(priv), null);
         KeyPair kp = keys.iterator().next();
-        return PublicKeyEntry.toString(kp.getPublic());
+        String publicLine = buildOpenSshPublic(kp.getPublic(), userId, null);
+        byte[] publicBytes = (publicLine + "\n").getBytes(StandardCharsets.UTF_8);
+        char[] passphrase = cred.passphraseRef != null ? secretResolver.resolve(cred.passphraseRef).toCharArray() : null;
+        byte[] knownHosts = cred.knownHostsRef != null ? secretResolver.resolveBytes(cred.knownHostsRef) : null;
+        secretWriter.writeSshKey(userId, cred.name, priv, publicBytes, passphrase, knownHosts);
+        return publicLine;
       } catch (IOException | GeneralSecurityException e) {
         throw new IllegalStateException("failed to derive public key", e);
       }
     }
     throw new IllegalStateException("unsupported secret backend");
+  }
+
+  private byte[] writeOpenSshPrivateKey(KeyPair kp, String passphrase) {
+    try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+      OpenSSHKeyPairResourceWriter writer = new OpenSSHKeyPairResourceWriter();
+      if (passphrase == null || passphrase.isBlank()) {
+        writer.writePrivateKey(kp, null, null, bos);
+      } else {
+        OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
+        enc.setCipherName(BuiltinCiphers.aes256ctr.getName());
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        BCryptKdfOptions kdf = new BCryptKdfOptions();
+        kdf.setSalt(salt);
+        kdf.setRounds(getConfiguredKdfRounds());
+        enc.setKdfOptions(kdf);
+        enc.setPasswordProvider(() -> passphrase.toCharArray());
+        writer.writePrivateKey(kp, null, enc, bos);
+      }
+      return bos.toByteArray();
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to write OpenSSH private key: " + e.getMessage(), e);
+    }
+  }
+
+  private int getConfiguredKdfRounds() {
+    return kdfRounds;
+  }
+
+  private String buildOpenSshPublic(java.security.PublicKey pub, String userId, String comment) {
+    String base = PublicKeyEntry.toString(pub);
+    String c = (comment == null || comment.isBlank()) ? "task-tally@" + userId : comment.trim();
+    return base + " " + c;
+  }
+
+  private String ensureTrailingNewline(String s) {
+    return s.endsWith("\n") ? s : s + "\n";
   }
 }
