@@ -96,9 +96,8 @@ public class SshKeysResourceTest {
     when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
 
     String body = "{\"name\":\"agent-key\",\"provider\":\"github\",\"comment\":\"task-tally@u1\"}";
-    given().contentType("application/json").body(body)
-        .post("/api/users/u1/ssh-keys/generate").then().statusCode(201).body("name", equalTo("agent-key"))
-        .body("provider", equalTo("github"));
+    given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys/generate").then().statusCode(201)
+        .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
 
     given().get("/api/users/u1/ssh-keys/agent-key/public").then().statusCode(200)
         .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(isEmptyOrNullString()))
