@@ -7,19 +7,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import org.apache.sshd.common.cipher.BuiltinCiphers;
 import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
-import org.apache.sshd.common.config.keys.loader.openssh.kdf.BCryptKdfOptions;
 import org.apache.sshd.common.util.io.resource.IoResource;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
@@ -31,7 +29,6 @@ import io.redhat.na.ssp.tasktally.secrets.SshKeyValidator;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class SshKeyService {
@@ -122,7 +119,9 @@ public class SshKeyService {
     if (provider == null || !ALLOWED_PROVIDERS.contains(provider)) {
       throw new IllegalArgumentException("provider must be github or gitlab");
     }
-    byte[] khRaw = req.knownHosts != null ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8) : null;
+    byte[] khRaw = req.knownHosts != null
+        ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8)
+        : null;
     SshKeyValidator.validateKnownHosts(khRaw);
     char[] pp = req.passphrase != null ? req.passphrase.toCharArray() : null;
     SshKeyValidator.validatePassphrase(pp);
@@ -150,7 +149,7 @@ public class SshKeyService {
       cred.createdAt = Instant.now();
       store.put(userId, cred);
       return cred;
-    } catch (GeneralSecurityException | IOException e) {
+    } catch (GeneralSecurityException e) {
       throw new IllegalStateException("failed to generate key", e);
     }
   }
@@ -178,7 +177,9 @@ public class SshKeyService {
         KeyPair kp = keys.iterator().next();
         String publicLine = buildOpenSshPublic(kp.getPublic(), userId, null);
         byte[] publicBytes = (publicLine + "\n").getBytes(StandardCharsets.UTF_8);
-        char[] passphrase = cred.passphraseRef != null ? secretResolver.resolve(cred.passphraseRef).toCharArray() : null;
+        char[] passphrase = cred.passphraseRef != null
+            ? secretResolver.resolve(cred.passphraseRef).toCharArray()
+            : null;
         byte[] knownHosts = cred.knownHostsRef != null ? secretResolver.resolveBytes(cred.knownHostsRef) : null;
         secretWriter.writeSshKey(userId, cred.name, priv, publicBytes, passphrase, knownHosts);
         return publicLine;
@@ -196,14 +197,9 @@ public class SshKeyService {
         writer.writePrivateKey(kp, null, null, bos);
       } else {
         OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
-        enc.setCipherName(BuiltinCiphers.aes256ctr.getName());
-        byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
-        BCryptKdfOptions kdf = new BCryptKdfOptions();
-        kdf.setSalt(salt);
-        kdf.setRounds(getConfiguredKdfRounds());
-        enc.setKdfOptions(kdf);
-        enc.setPasswordProvider(() -> passphrase.toCharArray());
+        enc.setCipherName("aes256-ctr");
+        enc.setKdfRounds(getConfiguredKdfRounds());
+        enc.setPassword(passphrase);
         writer.writePrivateKey(kp, null, enc, bos);
       }
       return bos.toByteArray();

@@ -46,6 +46,13 @@ public class SshKeyServiceTest {
     assertEquals(1, store.list("u1").size());
     verify(writer).writeSshKey(any(), any(), any(), any(), any(), any());
   }
+  @org.junit.jupiter.api.AfterEach
+  public void tearDown() {
+    // Remove all credentials for user u1 after each test
+    for (CredentialRef cred : store.list("u1")) {
+      store.remove("u1", cred.name);
+    }
+  }
 
   @Test
   public void generateWithoutPassphrase() {
@@ -54,16 +61,16 @@ public class SshKeyServiceTest {
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
       priv.set(inv.getArgument(2));
       pub.set(inv.getArgument(3));
-      return new SshSecretRefs("k8s:secret/tasktally-ssh-u1-k1#id_ed25519", null, null);
+      return new SshSecretRefs("k8s:secret/tasktally-ssh-u1-unique_no_passphrase#id_ed25519", null, null);
     });
     when(resolver.resolveBytes(any())).thenAnswer(inv -> pub.get());
 
     SshKeyGenerateRequest req = new SshKeyGenerateRequest();
-    req.name = "k1";
+    req.name = "unique_no_passphrase";
     req.provider = "github";
     CredentialRef cred = service.generate("u1", req);
     assertNotNull(cred);
-    String pk = service.getPublicKey("u1", "k1");
+    String pk = service.getPublicKey("u1", "unique_no_passphrase");
     assertTrue(pk.startsWith("ssh-ed25519 "));
     String privStr = new String(priv.get(), StandardCharsets.UTF_8);
     assertTrue(privStr.contains("openssh-key-v1"));

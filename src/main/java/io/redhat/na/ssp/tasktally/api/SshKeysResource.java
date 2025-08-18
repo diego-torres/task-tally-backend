@@ -93,8 +93,7 @@ public class SshKeysResource {
         code = "SSH_PASSPHRASE_REQUIRED";
       }
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(java.util.Map.of("code", code, "message", e.getMessage()))
-          .build();
+          .entity(java.util.Map.of("code", code, "message", e.getMessage())).build();
     }
   }
 
