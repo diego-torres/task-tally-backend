@@ -3,12 +3,17 @@ package io.redhat.na.ssp.tasktally.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.emptyOrNullString;
+
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -16,9 +21,6 @@ import io.quarkus.test.security.TestSecurity;
 import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
-import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 public class SshKeysResourceTest {
@@ -100,7 +102,7 @@ public class SshKeysResourceTest {
         .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
 
     given().get("/api/users/u1/ssh-keys/agent-key/public").then().statusCode(200)
-        .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(isEmptyOrNullString()))
+        .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(emptyOrNullString()))
         .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
   }
 

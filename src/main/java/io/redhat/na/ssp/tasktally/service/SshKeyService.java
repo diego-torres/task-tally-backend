@@ -24,6 +24,7 @@ import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
+import org.apache.sshd.common.util.io.resource.IoResource;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
@@ -121,7 +122,7 @@ public class SshKeyService {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
       if (pp != null && pp.length > 0) {
-        enc.setPassword(pp);
+        enc.setPassword(new String(pp));
       }
       new OpenSSHKeyPairResourceWriter().writePrivateKey(kp, null, enc, bos);
       byte[] privateOpenSsh = bos.toByteArray();
@@ -153,7 +154,7 @@ public class SshKeyService {
     return getPublicKey(cred);
   }
 
-  private String getPublicKey(CredentialRef cred) {
+  public String getPublicKey(CredentialRef cred) {
     String privRef = cred.secretRef;
     if (privRef == null) {
       throw new IllegalStateException("missing secret ref");
@@ -170,8 +171,10 @@ public class SshKeyService {
       }
       try {
         byte[] priv = secretResolver.resolveBytes(privRef);
-        Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null,
-            new ByteArrayInputStream(priv), null);
+        Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null, // SessionContext
+            (IoResource<?>) new ByteArrayInputStream(priv), // InputStream
+            null // FilePasswordProvider
+        );
         KeyPair kp = keys.iterator().next();
         return PublicKeyEntry.toString(kp.getPublic());
       } catch (IOException | GeneralSecurityException e) {
