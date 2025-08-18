@@ -39,7 +39,9 @@ public class SshKeysResource {
 
   private void authorize(String pathUser) {
     String tokenUser = Identities.userId(identity);
+    LOG.debugf("Authorizing user: tokenUser=%s, pathUser=%s", tokenUser, pathUser);
     if (!tokenUser.equals(pathUser)) {
+      LOG.warnf("Authorization failed for user: tokenUser=%s, pathUser=%s", tokenUser, pathUser);
       throw new WebApplicationException("forbidden", Response.Status.FORBIDDEN);
     }
   }
@@ -60,21 +62,28 @@ public class SshKeysResource {
   @Operation(summary = "List SSH keys for user")
   @APIResponse(responseCode = "200", description = "List of SSH credential references")
   public List<CredentialDto> list(@PathParam("userId") String userId) {
+    LOG.infof("Listing SSH keys for user: %s", userId);
     authorize(userId);
-    return service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
+    List<CredentialDto> result = service.list(userId).stream().map(this::toDto).collect(Collectors.toList());
+    LOG.debugf("Found %d SSH keys for user: %s", result.size(), userId);
+    return result;
   }
 
   @POST
   @Operation(summary = "Create SSH key for user")
   @APIResponse(responseCode = "201", description = "Created")
   public Response create(@PathParam("userId") String userId, SshKeyCreateRequest req) {
+    LOG.infof("Creating SSH key for user: %s", userId);
     authorize(userId);
     try {
       CredentialRef cred = service.create(userId, req);
+      LOG.infof("SSH key created for user: %s, key name: %s", userId, cred.name);
       return Response.status(Response.Status.CREATED).entity(toDto(cred)).build();
     } catch (IllegalStateException e) {
+      LOG.errorf("Failed to create SSH key for user: %s due to state error: %s", userId, e.getMessage());
       throw new WebApplicationException(e.getMessage(), Response.Status.CONFLICT);
     } catch (IllegalArgumentException e) {
+      LOG.errorf("Failed to create SSH key for user: %s due to argument error: %s", userId, e.getMessage());
       throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
     }
   }
@@ -84,11 +93,14 @@ public class SshKeysResource {
   @Operation(summary = "Delete SSH key")
   @APIResponse(responseCode = "204", description = "Deleted")
   public Response delete(@PathParam("userId") String userId, @PathParam("name") String name) {
+    LOG.infof("Deleting SSH key for user: %s, key name: %s", userId, name);
     authorize(userId);
     try {
       service.delete(userId, name);
+      LOG.infof("SSH key deleted for user: %s, key name: %s", userId, name);
       return Response.noContent().build();
     } catch (IllegalArgumentException e) {
+      LOG.errorf("Failed to delete SSH key for user: %s, key name: %s. Reason: %s", userId, name, e.getMessage());
       throw new NotFoundException();
     }
   }
