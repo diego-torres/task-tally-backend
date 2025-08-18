@@ -91,19 +91,20 @@ public class SshKeysResourceTest {
   public void generateAndFetchPublicKey() {
     cleanupUserKeys("u1");
     AtomicReference<byte[]> pub = new AtomicReference<>();
+    String uniqueName = "agent-key-" + System.currentTimeMillis();
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
       pub.set(inv.getArgument(3));
-      return new SshSecretRefs("k8s:secret/agent-key#id_ed25519", null, null);
+      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_ed25519", null, null);
     });
     when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
 
-    String body = "{\"name\":\"agent-key\",\"provider\":\"github\",\"comment\":\"task-tally@u1\"}";
+    String body = String.format("{\"name\":\"%s\",\"provider\":\"github\",\"comment\":\"task-tally@u1\"}", uniqueName);
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys/generate").then().statusCode(201)
-        .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
+        .body("name", equalTo(uniqueName)).body("provider", equalTo("github"));
 
-    given().get("/api/users/u1/ssh-keys/agent-key/public").then().statusCode(200)
+    given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().statusCode(200)
         .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(emptyOrNullString()))
-        .body("name", equalTo("agent-key")).body("provider", equalTo("github"));
+        .body("name", equalTo(uniqueName)).body("provider", equalTo("github"));
   }
 
   @Test

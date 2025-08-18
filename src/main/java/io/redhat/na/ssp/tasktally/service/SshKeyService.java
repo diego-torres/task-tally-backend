@@ -130,7 +130,10 @@ public class SshKeyService {
     }
 
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
+      // Ensure NetI2P EdDSA provider is registered
+      java.security.Security.addProvider(new net.i2p.crypto.eddsa.EdDSASecurityProvider());
+      KeyPairGenerator kpg = KeyPairGenerator.getInstance("EdDSA", "EdDSA");
+      kpg.initialize(new net.i2p.crypto.eddsa.spec.EdDSAGenParameterSpec("Ed25519"));
       KeyPair kp = kpg.generateKeyPair();
       byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
