@@ -12,6 +12,13 @@ done
 REALM=tasktally
 KC=http://keycloak:8080
 
+# Task tally public client for front end
+EXISTING_CLIENT=$(/opt/keycloak/bin/kcadm.sh get clients -r $REALM -q clientId=task-tally --fields id --format csv --noquotes)
+if [ -n "$EXISTING_CLIENT" ]; then
+  echo "Client 'task-tally' already exists. Exiting init script."
+  exit 0
+fi
+
 # Create realm
 /opt/keycloak/bin/kcadm.sh create realms -s realm=$REALM -s enabled=true || true
 
@@ -20,17 +27,22 @@ auth_backend="clients -r $REALM -s clientId=task-tally-backend -s enabled=true -
 /opt/keycloak/bin/kcadm.sh create $auth_backend || true
 
 # Swagger public client with PKCE
-/opt/keycloak/bin/kcadm.sh create clients -r $REALM -s clientId=task-tally-swagger -s enabled=true -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s 'attributes."pkce.code.challenge.method"=S256' -s 'attributes."pkce.code.challenge.required"=true' -s 'redirectUris=["http://localhost:8080/q/swagger-ui/oauth2-redirect.html"]' -s 'webOrigins=["http://localhost:8080"]' || true
+/opt/keycloak/bin/kcadm.sh create clients -r $REALM -s clientId=task-tally-swagger -s enabled=true -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s 'attributes."pkce.code.challenge.method"=S256' -s 'attributes."pkce.code.challenge.required"=true' -s 'redirectUris=["http://localhost:8081/q/swagger-ui/oauth2-redirect.html"]' -s 'webOrigins=["http://localhost:8081"]' || true
+
+/opt/keycloak/bin/kcadm.sh create clients -r $REALM -s clientId=task-tally -s enabled=true -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:9000/*"]' -s 'webOrigins=["http://localhost:9000"]' || true
 
 SWAGGER_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r $REALM -q clientId=task-tally-swagger --fields id --format csv --noquotes)
 /opt/keycloak/bin/kcadm.sh create clients/$SWAGGER_ID/protocol-mappers/models -r $REALM -s name=aud-task-tally-backend -s protocol=openid-connect -s protocolMapper=oidc-audience-mapper -s 'config."included.client.audience"=task-tally-backend' -s 'config."id.token.claim"=false' -s 'config."access.token.claim"=true' || true
+
+TASK_TALLY_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r $REALM -q clientId=task-tally --fields id --format csv --noquotes)
+/opt/keycloak/bin/kcadm.sh create clients/$TASK_TALLY_ID/protocol-mappers/models -r $REALM -s name=aud-task-tally-backend -s protocol=openid-connect -s protocolMapper=oidc-audience-mapper -s 'config."included.client.audience"=task-tally-backend' -s 'config."id.token.claim"=false' -s 'config."access.token.claim"=true' || true
 
 # Roles
 /opt/keycloak/bin/kcadm.sh create roles -r $REALM -s name=user || true
 /opt/keycloak/bin/kcadm.sh create roles -r $REALM -s name=admin || true
 
 # Users
-for u in alice admin; do
+for u in alice admin tasktally; do
   /opt/keycloak/bin/kcadm.sh create users -r $REALM -s username=$u -s enabled=true || true
   /opt/keycloak/bin/kcadm.sh set-password -r $REALM --username $u --new-password $u
  done
