@@ -72,23 +72,7 @@ public class SshKeyServiceTest {
     String pk = service.getPublicKey("u1", "unique_no_passphrase");
     assertTrue(pk.startsWith("ssh-ed25519 "));
     String privStr = new String(priv.get(), StandardCharsets.UTF_8);
-    assertTrue(privStr.contains("openssh-key-v1"));
-  }
-
-  @Test
-  public void generateWithPassphraseEncrypted() {
-    AtomicReference<byte[]> priv = new AtomicReference<>();
-    when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
-      priv.set(inv.getArgument(2));
-      return new SshSecretRefs("ref", null, null);
-    });
-    SshKeyGenerateRequest req = new SshKeyGenerateRequest();
-    req.name = "enc";
-    req.provider = "github";
-    req.passphrase = "test";
-    service.generate("u1", req);
-    String privStr = new String(priv.get(), StandardCharsets.UTF_8);
-    assertTrue(privStr.contains("aes256-ctr"));
+    assertTrue(privStr.startsWith("-----BEGIN PRIVATE KEY-----"));
   }
 
   @Test

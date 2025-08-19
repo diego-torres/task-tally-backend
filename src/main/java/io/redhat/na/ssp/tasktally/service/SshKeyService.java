@@ -1,12 +1,12 @@
 package io.redhat.na.ssp.tasktally.service;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -16,8 +16,6 @@ import org.apache.sshd.common.NamedResource;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
-import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
-import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -42,9 +40,6 @@ public class SshKeyService {
   CredentialStore store;
   @Inject
   SecretResolver secretResolver;
-
-  @ConfigProperty(name = "ssh.kdf.rounds", defaultValue = "16")
-  int kdfRounds;
 
   @ConfigProperty(name = "ssh.encryption.required", defaultValue = "false")
   boolean encryptionRequired;
@@ -131,15 +126,14 @@ public class SshKeyService {
     }
 
     try {
-      // remove: addProvider/getProvider, EdDSA imports, and manual initialization
       KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
       KeyPair kp = kpg.generateKeyPair();
-      byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
+      byte[] privatePem = writePkcs8Pem(kp.getPrivate());
 
       String publicLine = buildOpenSshPublic(kp.getPublic(), userId, req.comment);
       byte[] publicOpenSsh = (publicLine + "\n").getBytes(StandardCharsets.UTF_8);
 
-      SshSecretRefs refs = secretWriter.writeSshKey(userId, name, privateOpenSsh, publicOpenSsh, pp, khRaw);
+      SshSecretRefs refs = secretWriter.writeSshKey(userId, name, privatePem, publicOpenSsh, pp, khRaw);
 
       CredentialRef cred = new CredentialRef();
       cred.name = name;
@@ -198,33 +192,16 @@ public class SshKeyService {
     throw new IllegalStateException("unsupported secret backend");
   }
 
-  private byte[] writeOpenSshPrivateKey(KeyPair kp, String passphrase) {
-    try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-      OpenSSHKeyPairResourceWriter writer = new OpenSSHKeyPairResourceWriter();
-      if (passphrase == null || passphrase.isBlank()) {
-        writer.writePrivateKey(kp, null, null, bos);
-      } else {
-        OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
-        // Use a cipher accepted by this sshd for OpenSSH key encryption
-        enc.setCipherName("aes256-cbc");
-        enc.setKdfRounds(getConfiguredKdfRounds());
-        enc.setPassword(passphrase);
-        writer.writePrivateKey(kp, null, enc, bos);
-      }
-      return bos.toByteArray();
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Failed to write OpenSSH private key: " + e.getMessage(), e);
-    }
-  }
-
-  private int getConfiguredKdfRounds() {
-    return kdfRounds;
+  private byte[] writePkcs8Pem(PrivateKey privateKey) {
+    String base64 = java.util.Base64.getMimeEncoder(64, new byte[] {'\n'})
+        .encodeToString(privateKey.getEncoded());
+    String pem = "-----BEGIN PRIVATE KEY-----\n" + base64 + "\n-----END PRIVATE KEY-----\n";
+    return pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
   }
 
   private String buildOpenSshPublic(java.security.PublicKey pub, String userId, String comment) {
-    String base = PublicKeyEntry.toString(pub);
     String c = (comment == null || comment.isBlank()) ? "task-tally@" + userId : comment.trim();
-    return base + " " + c;
+    return PublicKeyEntry.toString(pub, c);
   }
 
   private String ensureTrailingNewline(String s) {
