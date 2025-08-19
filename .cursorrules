@@ -31,6 +31,7 @@ This is a Quarkus-based Java 17 backend for Task-tally, a task management system
 - **Integration tests**: Include resource/integration tests for API endpoints
 - **Test coverage**: Aim for high test coverage, especially for security-critical code
 - **Test data**: Use test containers for database tests; never use production data
+- **Test execution**: All tests in this project should run through the command `./mvnw clean test`
 
 ### Code Generation Guidelines
 - **Explain reasoning**: When making architectural decisions, explain your rationale
