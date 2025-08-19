@@ -14,7 +14,6 @@ import java.util.Set;
 
 import org.apache.sshd.common.NamedResource;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
-import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -193,15 +192,16 @@ public class SshKeyService {
   }
 
   private byte[] writePkcs8Pem(PrivateKey privateKey) {
-    String base64 = java.util.Base64.getMimeEncoder(64, new byte[] {'\n'})
-        .encodeToString(privateKey.getEncoded());
+    String base64 = java.util.Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(privateKey.getEncoded());
     String pem = "-----BEGIN PRIVATE KEY-----\n" + base64 + "\n-----END PRIVATE KEY-----\n";
     return pem.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
   }
 
   private String buildOpenSshPublic(java.security.PublicKey pub, String userId, String comment) {
     String c = (comment == null || comment.isBlank()) ? "task-tally@" + userId : comment.trim();
-    return PublicKeyEntry.toString(pub, c);
+    String keyType = "ssh-ed25519";
+    String encoded = java.util.Base64.getEncoder().encodeToString(pub.getEncoded());
+    return keyType + " " + encoded + " " + c;
   }
 
   private String ensureTrailingNewline(String s) {

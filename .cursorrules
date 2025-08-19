@@ -1,0 +1,67 @@
+# Cursor Rules for Task-tally Backend
+
+## Project Overview
+This is a Quarkus-based Java 17 backend for Task-tally, a task management system with GitHub integration, PostgreSQL persistence, and Kubernetes deployment.
+
+## Core Technical Rules (from AGENTS.md)
+
+### Security & Compliance (NON-NEGOTIABLE)
+- **NEVER store raw secrets** in source control, logs, or databases. Store only **references** like `k8s:secret/<name>#<key>` or `vault:kv/...`
+- **No plaintext secret echo** in logs, exceptions, or tests. Mask with `****`
+- **SSH keys**: API accepts uploaded private keys only to immediately store in external secret store (Kubernetes Secret or Vault)
+- **PII minimization**: Store minimum user info; never log user emails or tokens
+- **Dependency hygiene**: Pin versions; avoid unmaintained libraries
+
+### Architecture
+- **Backend**: Quarkus REST with layered architecture: `api → service → repo → db`
+- **Persistence**: PostgreSQL with Flyway migrations; JSONB for flexible preferences
+- **Secrets**: Use `SecretResolver` SPI (Kubernetes + Vault). Code consumes only secret values returned at runtime
+- **Git**: Prefer GitHub REST API or App installation tokens. Allow SSH transport when user has uploaded SSH key
+
+### Code Standards
+- **Java files**: Use 2 spaces for indentation throughout all `.java` files. No tabs allowed
+- **Formatting**: Follow the project's eclipse-formatter.xml configuration
+- **Error handling**: Use JSON error envelope + request ID pattern
+
+## Collaboration Rules
+
+### Testing Approach
+- **ALWAYS include tests** with any new features
+- **Unit tests**: Write comprehensive unit tests for service layer and business logic
+- **Integration tests**: Include resource/integration tests for API endpoints
+- **Test coverage**: Aim for high test coverage, especially for security-critical code
+- **Test data**: Use test containers for database tests; never use production data
+
+### Code Generation Guidelines
+- **Explain reasoning**: When making architectural decisions, explain your rationale
+- **Security first**: Always prioritize security in code generation
+- **Documentation**: Include clear comments for complex logic, especially security-related code
+- **Error handling**: Implement proper error handling and validation
+- **API design**: Follow RESTful principles and existing API patterns
+
+### Communication Style
+- **Be thorough**: Provide detailed explanations for complex changes
+- **Security focus**: Always highlight security implications of changes
+- **Testing emphasis**: Explicitly mention testing approach for new features
+- **Code review**: Suggest improvements and explain trade-offs
+
+### File Organization
+- Follow existing package structure: `api`, `service`, `repo`, `model`, `secrets`
+- Place tests in corresponding test packages
+- Use meaningful class and method names
+- Follow Java naming conventions
+
+## When Implementing New Features
+1. **Security review**: Ensure no secrets are persisted inappropriately
+2. **Testing**: Include unit and integration tests
+3. **Documentation**: Update relevant documentation
+4. **Migration**: Include Flyway migrations if schema changes needed
+5. **API consistency**: Follow existing API patterns and error handling
+
+## Reference Files
+- `AGENTS.md` - Detailed technical specifications
+- `pom.xml` - Dependencies and build configuration
+- `application.properties` - Application configuration
+- `eclipse-formatter.xml` - Code formatting rules
+
+Remember: Security and testing are non-negotiable. Always prioritize these aspects in any code generation or modification.
