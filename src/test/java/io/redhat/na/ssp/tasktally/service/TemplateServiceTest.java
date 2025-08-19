@@ -193,4 +193,33 @@ public class TemplateServiceTest {
     assertEquals("feature", updated.defaultBranch);
     assertEquals("update-key", updated.sshKeyName);
   }
+
+  @Test
+  @Transactional
+  public void testCreateWithSshKeyWithoutKnownHosts() throws IOException, GitAPIException {
+    // Create an SSH key without known_hosts
+    UserPreferences up = userRepo.findByUserId(userId).get();
+    CredentialRef sshKey = new CredentialRef();
+    sshKey.userPreferences = up;
+    sshKey.name = "github-no-known-hosts";
+    sshKey.provider = "github";
+    sshKey.scope = "write";
+    sshKey.secretRef = "k8s:secret/test-key#id_ed25519";
+    // Note: knownHostsRef is null - this should trigger automatic GitHub host key addition
+    credentialRefRepo.persist(sshKey);
+
+    Template t = new Template();
+    t.name = "T6";
+    t.description = "desc with SSH key without known_hosts";
+    t.repositoryUrl = "git@github.com:user/repo.git";
+    t.provider = "github";
+    t.defaultBranch = "main";
+    t.sshKeyName = "github-no-known-hosts";
+
+    Template saved = service.create(userId, t);
+    assertNotNull(saved.id);
+    assertEquals("github", saved.provider);
+    assertEquals("main", saved.defaultBranch);
+    assertEquals("github-no-known-hosts", saved.sshKeyName);
+  }
 }
