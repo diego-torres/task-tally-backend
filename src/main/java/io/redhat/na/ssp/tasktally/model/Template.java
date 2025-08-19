@@ -28,6 +28,15 @@ public class Template extends PanacheEntityBase {
   @NotBlank
   public String repositoryUrl;
 
+  @Column
+  public String provider;
+
+  @Column(name = "default_branch")
+  public String defaultBranch;
+
+  @Column(name = "ssh_key_name")
+  public String sshKeyName;
+
   @Column(name = "created_at")
   public Instant createdAt;
 

@@ -12,7 +12,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 
 import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.service.PreferencesService;
+import io.redhat.na.ssp.tasktally.service.SshKeyService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -22,7 +22,7 @@ public class TemplateService {
   private static final Logger LOG = Logger.getLogger(TemplateService.class);
 
   @Inject
-  PreferencesService preferencesService;
+  SshKeyService sshKeyService;
 
   @Inject
   SshGitService gitService;
@@ -33,7 +33,7 @@ public class TemplateService {
     LOG.debugf("Pulling templates from %s for user %s", req.repoUri, userId);
     CredentialRef cred = null;
     if (req.credentialName != null && !req.credentialName.isBlank()) {
-      cred = preferencesService.findCredential(userId, req.credentialName);
+      cred = sshKeyService.get(userId, req.credentialName);
     }
     try {
       Path work = Files.createTempDirectory("tmpl-clone");

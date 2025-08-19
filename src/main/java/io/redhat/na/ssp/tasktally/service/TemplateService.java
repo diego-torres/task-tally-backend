@@ -2,6 +2,7 @@ package io.redhat.na.ssp.tasktally.service;
 
 import io.redhat.na.ssp.tasktally.model.Template;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
+import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.repo.TemplateRepository;
 import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
 import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
@@ -30,6 +31,8 @@ public class TemplateService {
   UserPreferencesRepository userRepo;
   @Inject
   SshGitService gitService;
+  @Inject
+  SshKeyService sshKeyService;
 
   private final Yaml yaml = new Yaml();
 
@@ -52,6 +55,23 @@ public class TemplateService {
       LOG.errorf("User %s not found", userId);
       return new NotFoundException();
     });
+
+    // Validate SSH key reference if provided
+    if (tmpl.sshKeyName != null && !tmpl.sshKeyName.trim().isEmpty()) {
+      try {
+        sshKeyService.get(userId, tmpl.sshKeyName);
+        LOG.debugf("SSH key %s validated for user %s", tmpl.sshKeyName, userId);
+      } catch (IllegalArgumentException e) {
+        LOG.errorf("Invalid SSH key reference %s for user %s: %s", tmpl.sshKeyName, userId, e.getMessage());
+        throw new IllegalArgumentException("Invalid SSH key reference: " + tmpl.sshKeyName);
+      }
+    }
+
+    // Set default branch if not provided
+    if (tmpl.defaultBranch == null || tmpl.defaultBranch.trim().isEmpty()) {
+      tmpl.defaultBranch = "main";
+    }
+
     tmpl.id = null;
     tmpl.userPreferences = up;
     templateRepo.persist(tmpl);
@@ -71,9 +91,24 @@ public class TemplateService {
       LOG.errorf("Template %d for user %s not found", templateId, userId);
       return new NotFoundException();
     });
+
+    // Validate SSH key reference if provided
+    if (incoming.sshKeyName != null && !incoming.sshKeyName.trim().isEmpty()) {
+      try {
+        sshKeyService.get(userId, incoming.sshKeyName);
+        LOG.debugf("SSH key %s validated for user %s", incoming.sshKeyName, userId);
+      } catch (IllegalArgumentException e) {
+        LOG.errorf("Invalid SSH key reference %s for user %s: %s", incoming.sshKeyName, userId, e.getMessage());
+        throw new IllegalArgumentException("Invalid SSH key reference: " + incoming.sshKeyName);
+      }
+    }
+
     existing.name = incoming.name;
     existing.description = incoming.description;
     existing.repositoryUrl = incoming.repositoryUrl;
+    existing.provider = incoming.provider;
+    existing.defaultBranch = incoming.defaultBranch != null ? incoming.defaultBranch : "main";
+    existing.sshKeyName = incoming.sshKeyName;
     templateRepo.persist(existing);
     syncRepo(existing);
     LOG.infof("Updated template %d for user %s", templateId, userId);
@@ -99,13 +134,30 @@ public class TemplateService {
     try {
       LOG.debugf("Syncing repository %s", tmpl.repositoryUrl);
       Path work = Files.createTempDirectory("tmpl-repo");
-      Path repo = gitService.cloneShallow(tmpl.repositoryUrl, "main", work, null);
+
+      // Get SSH credential if specified
+      CredentialRef sshCred = null;
+      if (tmpl.sshKeyName != null && !tmpl.sshKeyName.trim().isEmpty()) {
+        try {
+          // We need to get the user ID from the template's user preferences
+          String userId = tmpl.userPreferences.userId;
+          sshCred = sshKeyService.get(userId, tmpl.sshKeyName);
+          LOG.debugf("Using SSH key %s for repository sync", tmpl.sshKeyName);
+        } catch (Exception e) {
+          LOG.warnf("Failed to get SSH key %s, proceeding without SSH: %s", tmpl.sshKeyName, e.getMessage());
+        }
+      }
+
+      String branch = tmpl.defaultBranch != null ? tmpl.defaultBranch : "main";
+      Path repo = gitService.cloneShallow(tmpl.repositoryUrl, branch, work, sshCred);
       Map<String, Object> data = new HashMap<>();
       data.put("name", tmpl.name);
       data.put("description", tmpl.description);
+      data.put("provider", tmpl.provider);
+      data.put("defaultBranch", tmpl.defaultBranch);
       Path file = repo.resolve("template.yml");
       Files.writeString(file, yaml.dump(data));
-      gitService.commitAndPush(repo, "TaskTally", "noreply@tasktally.local", "Update template", null);
+      gitService.commitAndPush(repo, "TaskTally", "noreply@tasktally.local", "Update template", sshCred);
       LOG.info("Repository synced successfully");
     } catch (IOException | GitAPIException e) {
       LOG.error("Failed to sync template repository", e);

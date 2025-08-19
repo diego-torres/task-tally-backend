@@ -82,6 +82,9 @@ public class TemplateResource {
     dto.name = t.name;
     dto.description = t.description;
     dto.repositoryUrl = t.repositoryUrl;
+    dto.provider = t.provider;
+    dto.defaultBranch = t.defaultBranch;
+    dto.sshKeyName = t.sshKeyName;
     return dto;
   }
 
@@ -90,6 +93,9 @@ public class TemplateResource {
     t.name = dto.name;
     t.description = dto.description;
     t.repositoryUrl = dto.repositoryUrl;
+    t.provider = dto.provider;
+    t.defaultBranch = dto.defaultBranch != null ? dto.defaultBranch : "main";
+    t.sshKeyName = dto.sshKeyName;
     return t;
   }
 }

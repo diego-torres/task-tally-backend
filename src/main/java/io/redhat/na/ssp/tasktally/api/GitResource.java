@@ -1,13 +1,9 @@
 package io.redhat.na.ssp.tasktally.api;
 
-import io.redhat.na.ssp.tasktally.api.dto.CredentialResponse;
 import io.redhat.na.ssp.tasktally.github.ProjectTemplate;
 import io.redhat.na.ssp.tasktally.github.TemplatePullRequest;
 import io.redhat.na.ssp.tasktally.github.TemplateService;
 import io.redhat.na.ssp.tasktally.github.TemplatePushRequest;
-import io.redhat.na.ssp.tasktally.github.GitLinkRequest;
-import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.service.PreferencesService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -28,32 +24,10 @@ public class GitResource {
   private static final Logger LOG = Logger.getLogger(GitResource.class);
 
   @Inject
-  PreferencesService preferencesService;
-
-  @Inject
   TemplateService templateService;
 
   @Inject
   SecurityIdentity identity;
-
-  @POST
-  @Path("/link")
-  public CredentialResponse link(@Valid GitLinkRequest req) {
-    String uid = Identities.userId(identity);
-    LOG.debugf("Linking credential %s for user %s", req.name, uid);
-    CredentialRef ref = new CredentialRef();
-    ref.name = req.name;
-    ref.provider = "github";
-    ref.scope = req.scope;
-    ref.secretRef = req.ref;
-    CredentialRef saved = preferencesService.addCredential(uid, ref);
-    CredentialResponse resp = new CredentialResponse();
-    resp.name = saved.name;
-    resp.provider = saved.provider;
-    resp.scope = saved.scope;
-    LOG.infof("Linked credential %s for user %s", saved.name, uid);
-    return resp;
-  }
 
   @POST
   @Path("/templates/pull")

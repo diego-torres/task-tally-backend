@@ -2,6 +2,7 @@ package io.redhat.na.ssp.tasktally.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -21,8 +22,10 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
 import io.redhat.na.ssp.tasktally.model.Template;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
+import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.repo.TemplateRepository;
 import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
+import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -35,6 +38,8 @@ public class TemplateServiceTest {
   UserPreferencesRepository userRepo;
   @Inject
   TemplateRepository templateRepo;
+  @Inject
+  CredentialRefRepository credentialRefRepo;
 
   @InjectMock
   SshGitService gitService;
@@ -62,6 +67,7 @@ public class TemplateServiceTest {
   @Transactional
   public void cleanup() {
     templateRepo.deleteAll();
+    credentialRefRepo.deleteAll();
     userRepo.deleteAll();
   }
 
@@ -85,5 +91,106 @@ public class TemplateServiceTest {
     service.delete(userId, saved.id);
     Long upId = userRepo.findByUserId(userId).get().id;
     assertTrue(templateRepo.listByUser(upId).isEmpty());
+  }
+
+  @Test
+  @Transactional
+  public void testCreateWithNewFields() throws IOException, GitAPIException {
+    // Create an SSH key first
+    UserPreferences up = userRepo.findByUserId(userId).get();
+    CredentialRef sshKey = new CredentialRef();
+    sshKey.userPreferences = up;
+    sshKey.name = "test-key";
+    sshKey.provider = "github";
+    sshKey.scope = "write";
+    sshKey.secretRef = "k8s:secret/test-key#id_ed25519";
+    sshKey.knownHostsRef = "k8s:secret/test-key#known_hosts";
+    credentialRefRepo.persist(sshKey);
+
+    Template t = new Template();
+    t.name = "T2";
+    t.description = "desc with new fields";
+    t.repositoryUrl = "git@github.com:user/repo.git";
+    t.provider = "github";
+    t.defaultBranch = "develop";
+    t.sshKeyName = "test-key";
+
+    Template saved = service.create(userId, t);
+    assertNotNull(saved.id);
+    assertEquals("github", saved.provider);
+    assertEquals("develop", saved.defaultBranch);
+    assertEquals("test-key", saved.sshKeyName);
+  }
+
+  @Test
+  @Transactional
+  public void testCreateWithDefaultBranch() throws IOException, GitAPIException {
+    Template t = new Template();
+    t.name = "T3";
+    t.description = "desc with default branch";
+    t.repositoryUrl = "git@github.com:user/repo.git";
+    t.provider = "gitlab";
+
+    Template saved = service.create(userId, t);
+    assertNotNull(saved.id);
+    assertEquals("gitlab", saved.provider);
+    assertEquals("main", saved.defaultBranch); // Should default to main
+    assertNull(saved.sshKeyName);
+  }
+
+  @Test
+  @Transactional
+  public void testCreateWithInvalidSshKey() {
+    Template t = new Template();
+    t.name = "T4";
+    t.description = "desc with invalid ssh key";
+    t.repositoryUrl = "git@github.com:user/repo.git";
+    t.provider = "github";
+    t.sshKeyName = "non-existent-key";
+
+    // Should throw IllegalArgumentException for invalid SSH key
+    try {
+      service.create(userId, t);
+      assertTrue(false, "Should have thrown exception for invalid SSH key");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains("Invalid SSH key reference"));
+    }
+  }
+
+  @Test
+  @Transactional
+  public void testUpdateWithNewFields() throws IOException, GitAPIException {
+    // Create initial template
+    Template t = new Template();
+    t.name = "T5";
+    t.description = "initial desc";
+    t.repositoryUrl = "git@github.com:user/repo.git";
+    Template saved = service.create(userId, t);
+
+    // Create an SSH key
+    UserPreferences up = userRepo.findByUserId(userId).get();
+    CredentialRef sshKey = new CredentialRef();
+    sshKey.userPreferences = up;
+    sshKey.name = "update-key";
+    sshKey.provider = "github";
+    sshKey.scope = "write";
+    sshKey.secretRef = "k8s:secret/update-key#id_ed25519";
+    sshKey.knownHostsRef = "k8s:secret/update-key#known_hosts";
+    credentialRefRepo.persist(sshKey);
+
+    // Update with new fields
+    Template upd = new Template();
+    upd.name = "T5-updated";
+    upd.description = "updated desc";
+    upd.repositoryUrl = "git@github.com:user/repo.git";
+    upd.provider = "github";
+    upd.defaultBranch = "feature";
+    upd.sshKeyName = "update-key";
+
+    Template updated = service.update(userId, saved.id, upd);
+    assertEquals("T5-updated", updated.name);
+    assertEquals("github", updated.provider);
+    assertEquals("feature", updated.defaultBranch);
+    assertEquals("update-key", updated.sshKeyName);
   }
 }
