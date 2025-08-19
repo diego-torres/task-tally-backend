@@ -79,7 +79,7 @@ public class SshKeyServiceTest {
     SshKeyCreateRequest req = new SshKeyCreateRequest();
     req.name = "k1";
     req.provider = "github";
-    req.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAA\n-----END OPENSSH PRIVATE KEY-----\n";
+    req.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\nAAA\n-----END OPENSSH TEST KEY-----\n";
     req.knownHosts = "github.com ssh-ed25519 AAAA\n";
     CredentialRef cred = service.create(TEST_USER_ID, req);
     assertEquals("ref1", cred.secretRef);
@@ -142,7 +142,7 @@ public class SshKeyServiceTest {
     SshKeyCreateRequest req = new SshKeyCreateRequest();
     req.name = "k1";
     req.provider = "github";
-    req.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAA\n-----END OPENSSH PRIVATE KEY-----\n";
+    req.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\nAAA\n-----END OPENSSH TEST KEY-----\n";
 
     service.create(TEST_USER_ID, req);
     assertEquals(1, service.list(TEST_USER_ID).size());

@@ -14,7 +14,7 @@ public class KubernetesSecretWriterTest {
   void writesSecretAndReturnsRefs() throws Exception {
     Path base = Files.createTempDirectory("secrets");
     KubernetesSecretWriter writer = new KubernetesSecretWriter(base.toString());
-    byte[] priv = "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----\n".getBytes(StandardCharsets.UTF_8);
+    byte[] priv = "-----BEGIN TEST KEY-----\nkey\n-----END TEST KEY-----\n".getBytes(StandardCharsets.UTF_8);
     byte[] pub = "ssh-ed25519 AAAA".getBytes(StandardCharsets.UTF_8);
     byte[] kh = "github.com ssh-ed25519 AAAA".getBytes(StandardCharsets.UTF_8);
     SshSecretRefs refs = writer.writeSshKey("u1", "My Key", priv, pub, null, kh);

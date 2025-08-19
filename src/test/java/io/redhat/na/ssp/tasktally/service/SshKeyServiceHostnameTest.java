@@ -65,7 +65,7 @@ class SshKeyServiceHostnameTest {
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
-    request.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.hostname = TEST_HOSTNAME;
 
     CredentialRef result = sshKeyService.create(TEST_USER_ID, request);
@@ -94,7 +94,7 @@ class SshKeyServiceHostnameTest {
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
-    request.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.knownHosts = providedKnownHosts;
     request.hostname = TEST_HOSTNAME; // Should be ignored since knownHosts is provided
 
@@ -119,7 +119,7 @@ class SshKeyServiceHostnameTest {
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
-    request.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.hostname = TEST_HOSTNAME;
 
     // Should throw exception
@@ -213,7 +213,7 @@ class SshKeyServiceHostnameTest {
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
-    request.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.hostname = ""; // Empty hostname
 
     CredentialRef result = sshKeyService.create(TEST_USER_ID, request);
@@ -237,7 +237,7 @@ class SshKeyServiceHostnameTest {
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
-    request.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.hostname = "   "; // Whitespace hostname
 
     CredentialRef result = sshKeyService.create(TEST_USER_ID, request);

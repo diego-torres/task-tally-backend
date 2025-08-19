@@ -16,7 +16,7 @@ public class TaskTallySshdSessionFactoryTest {
   @Test
   void testCreateWithGitHubHostKey(@TempDir Path tempDir) throws IOException {
     // Test data
-    byte[] privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----\n"
+    byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
     byte[] knownHosts = "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\n"
         .getBytes(StandardCharsets.UTF_8);
@@ -50,7 +50,7 @@ public class TaskTallySshdSessionFactoryTest {
   @Test
   void testCreateWithEmptyKnownHosts(@TempDir Path tempDir) throws IOException {
     // Test data
-    byte[] privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----\n"
+    byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
 
     // Create session factory with empty known_hosts (should use default GitHub host key)
@@ -70,7 +70,7 @@ public class TaskTallySshdSessionFactoryTest {
   @Test
   void testCreateWithNullKnownHosts(@TempDir Path tempDir) throws IOException {
     // Test data
-    byte[] privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\ntest-key\n-----END OPENSSH PRIVATE KEY-----\n"
+    byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
 
     // Create session factory with null known_hosts (should use default GitHub host key)

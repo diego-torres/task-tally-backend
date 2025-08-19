@@ -74,7 +74,7 @@ public class SshKeysResourceTest {
   @TestSecurity(user = "u1", roles = {"user"})
   public void createListDelete() {
     cleanupUserKeys("u1");
-    String body = "{\"name\":\"k1\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nAAA\\n----END OPENSSH PRIVATE KEY-----\\n\",\"knownHosts\":\"github.com ssh-ed25519 AAAA\\n\"}";
+    String body = "{\"name\":\"k1\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH TEST KEY-----\\nAAA\\n----END OPENSSH TEST KEY-----\\n\",\"knownHosts\":\"github.com ssh-ed25519 AAAA\\n\"}";
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(201)
         .body("secretRef", equalTo("kref"));
     given().get("/api/users/u1/ssh-keys").then().statusCode(200).body("", hasSize(1));
@@ -86,7 +86,7 @@ public class SshKeysResourceTest {
   @TestSecurity(user = "u1", roles = {"user"})
   public void duplicateName409() {
     cleanupUserKeys("u1");
-    String body = "{\"name\":\"dup\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nAAA\\n----END OPENSSH PRIVATE KEY-----\\n\"}";
+    String body = "{\"name\":\"dup\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH TEST KEY-----\\nAAA\\n----END OPENSSH TEST KEY-----\\n\"}";
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(201);
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(409);
   }
@@ -95,15 +95,15 @@ public class SshKeysResourceTest {
   @TestSecurity(user = "u1", roles = {"user"})
   public void oversizedKey400() {
     String big = "A".repeat(11 * 1024);
-    String body = "{\"name\":\"big\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----"
-        + big + "-----END OPENSSH PRIVATE KEY-----\"}";
+    String body = "{\"name\":\"big\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH TEST KEY-----" + big
+        + "-----END OPENSSH TEST KEY-----\"}";
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(400);
   }
 
   @Test
   @TestSecurity(user = "u2", roles = {"user"})
   public void pathMismatch403() {
-    String body = "{\"name\":\"k2\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nAAA\\n----END OPENSSH PRIVATE KEY-----\\n\"}";
+    String body = "{\"name\":\"k2\",\"provider\":\"github\",\"privateKeyPem\":\"-----BEGIN OPENSSH TEST KEY-----\\nAAA\\n----END OPENSSH TEST KEY-----\\n\"}";
     given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys").then().statusCode(403);
   }
 
