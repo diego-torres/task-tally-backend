@@ -84,7 +84,8 @@ public class SshKeyService {
   }
 
   public void delete(String userId, String name) {
-    CredentialRef cred = store.find(userId, name).orElseThrow(() -> new IllegalArgumentException("not found"));
+    String trimmedName = name != null ? name.trim() : null;
+    CredentialRef cred = store.find(userId, trimmedName).orElseThrow(() -> new IllegalArgumentException("not found"));
     try {
       secretWriter.deleteByRef(cred.secretRef);
       secretWriter.deleteByRef(cred.knownHostsRef);
@@ -92,11 +93,12 @@ public class SshKeyService {
     } catch (Exception e) {
       LOG.warn("Failed to delete secret", e);
     }
-    store.remove(userId, name);
+    store.remove(userId, trimmedName);
   }
 
   public CredentialRef get(String userId, String name) {
-    return store.find(userId, name).orElseThrow(() -> new IllegalArgumentException("not found"));
+    String trimmedName = name != null ? name.trim() : null;
+    return store.find(userId, trimmedName).orElseThrow(() -> new IllegalArgumentException("not found"));
   }
 
   public CredentialRef generate(String userId, SshKeyGenerateRequest req) {
@@ -156,7 +158,7 @@ public class SshKeyService {
       throw new IllegalStateException("missing secret ref");
     }
     if (privRef.startsWith("k8s:secret/")) {
-      String pubRef = privRef.replaceFirst("#id_ed25519$", "#id_ed25519.pub");
+      String pubRef = privRef.replaceFirst("#id_ed25519", "#id_ed25519.pub");
       try {
         byte[] pub = secretResolver.resolveBytes(pubRef);
         if (pub != null && pub.length > 0) {

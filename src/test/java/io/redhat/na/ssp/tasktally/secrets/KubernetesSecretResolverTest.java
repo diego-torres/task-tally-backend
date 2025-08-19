@@ -17,16 +17,14 @@ public class KubernetesSecretResolverTest {
     Path secret = base.resolve("mysecret");
     Files.createDirectories(secret);
     Files.writeString(secret.resolve("token"), "abc");
-    System.setProperty("k8s.secret.base.path", base.toString());
-    KubernetesSecretResolver r = new KubernetesSecretResolver();
+    KubernetesSecretResolver r = new KubernetesSecretResolver(base.toString());
     assertEquals("abc", r.resolve("k8s:secret/mysecret#token"));
   }
 
   @Test
   void resolvesEnv() {
-    System.setProperty("k8s.secret.base.path", "/nope");
     System.setProperty("env.MYSECRET_TOKEN", "xyz");
-    KubernetesSecretResolver r = new KubernetesSecretResolver();
+    KubernetesSecretResolver r = new KubernetesSecretResolver("/nope");
     assertEquals("xyz", r.resolve("k8s:secret/mysecret#token"));
   }
 }

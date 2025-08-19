@@ -10,6 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * Resolves secrets from Kubernetes mounted files or environment variables.
@@ -19,12 +21,10 @@ public class KubernetesSecretResolver implements SecretResolver {
   private static final Pattern REF = Pattern.compile("k8s:secret/([^#]+)#(.+)");
   private final Path basePath;
 
-  public KubernetesSecretResolver() {
-    String base = System.getProperty("k8s.secret.base.path");
-    if (base == null || base.isBlank()) {
-      base = System.getenv().getOrDefault("K8S_SECRET_BASE_PATH", "/var/run/secrets");
-    }
-    this.basePath = Paths.get(base);
+  @Inject
+  public KubernetesSecretResolver(
+      @ConfigProperty(name = "k8s.secret.base.path", defaultValue = "/var/run/secrets") String basePathString) {
+    this.basePath = Paths.get(basePathString);
   }
 
   // Package-private constructor for tests
