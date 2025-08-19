@@ -45,6 +45,8 @@ public class SshKeyService {
   UserPreferencesRepository userPreferencesRepository;
   @Inject
   SecretResolver secretResolver;
+  @Inject
+  SshHostKeyService sshHostKeyService;
 
   @ConfigProperty(name = "ssh.encryption.required", defaultValue = "false")
   boolean encryptionRequired;
@@ -78,8 +80,25 @@ public class SshKeyService {
     }
     byte[] priv = req.privateKeyPem != null ? req.privateKeyPem.getBytes(StandardCharsets.UTF_8) : null;
     SshKeyValidator.validatePrivateKey(priv);
-    byte[] kh = req.knownHosts != null ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8) : null;
+
+    // Handle known hosts - either provided directly or fetched from hostname
+    byte[] kh;
+    if (req.knownHosts != null && !req.knownHosts.trim().isEmpty()) {
+      kh = ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8);
+    } else if (req.hostname != null && !req.hostname.trim().isEmpty()) {
+      try {
+        String fetchedKnownHosts = sshHostKeyService.fetchKnownHosts(req.hostname.trim());
+        kh = fetchedKnownHosts.getBytes(StandardCharsets.UTF_8);
+        LOG.infof("Automatically fetched host keys from %s for SSH credential %s", req.hostname, name);
+      } catch (IOException e) {
+        LOG.warnf("Failed to fetch host keys from %s: %s", req.hostname, e.getMessage());
+        throw new IllegalArgumentException("Failed to fetch host keys from " + req.hostname + ": " + e.getMessage());
+      }
+    } else {
+      kh = null;
+    }
     SshKeyValidator.validateKnownHosts(kh);
+
     char[] pp = req.passphrase != null ? req.passphrase.toCharArray() : null;
     SshKeyValidator.validatePassphrase(pp);
 
@@ -146,9 +165,22 @@ public class SshKeyService {
     if (provider == null || !ALLOWED_PROVIDERS.contains(provider)) {
       throw new IllegalArgumentException("provider must be github or gitlab");
     }
-    byte[] khRaw = req.knownHosts != null
-        ? ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8)
-        : null;
+    // Handle known hosts - either provided directly or fetched from hostname
+    byte[] khRaw;
+    if (req.knownHosts != null && !req.knownHosts.trim().isEmpty()) {
+      khRaw = ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8);
+    } else if (req.hostname != null && !req.hostname.trim().isEmpty()) {
+      try {
+        String fetchedKnownHosts = sshHostKeyService.fetchKnownHosts(req.hostname.trim());
+        khRaw = fetchedKnownHosts.getBytes(StandardCharsets.UTF_8);
+        LOG.infof("Automatically fetched host keys from %s for SSH credential %s", req.hostname, name);
+      } catch (IOException e) {
+        LOG.warnf("Failed to fetch host keys from %s: %s", req.hostname, e.getMessage());
+        throw new IllegalArgumentException("Failed to fetch host keys from " + req.hostname + ": " + e.getMessage());
+      }
+    } else {
+      khRaw = null;
+    }
     SshKeyValidator.validateKnownHosts(khRaw);
     char[] pp = req.passphrase != null ? req.passphrase.toCharArray() : null;
     SshKeyValidator.validatePassphrase(pp);

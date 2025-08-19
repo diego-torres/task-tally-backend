@@ -12,7 +12,7 @@ public final class TaskTallySshdSessionFactory {
   private TaskTallySshdSessionFactory() {
   }
 
-  // GitHub's SSH host key (ed25519)
+  // Default GitHub's SSH host key (ed25519) - fallback when no known_hosts provided
   private static final String GITHUB_HOST_KEY = "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\n";
 
   public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase, java.io.File sshDir)
@@ -37,14 +37,8 @@ public final class TaskTallySshdSessionFactory {
     if (knownHosts == null || knownHosts.length == 0) {
       hostsToWrite = GITHUB_HOST_KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     } else {
-      // Check if GitHub's host key is already in the provided known_hosts
-      String knownHostsStr = new String(knownHosts, java.nio.charset.StandardCharsets.UTF_8);
-      if (!knownHostsStr.contains("github.com ssh-ed25519")) {
-        // Append GitHub's host key if not present
-        hostsToWrite = (knownHostsStr + GITHUB_HOST_KEY).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-      } else {
-        hostsToWrite = knownHosts;
-      }
+      // Use the provided known_hosts as-is, since they should already be complete
+      hostsToWrite = knownHosts;
     }
 
     java.nio.file.Files.write(knownHostsFile, hostsToWrite, java.nio.file.StandardOpenOption.CREATE);

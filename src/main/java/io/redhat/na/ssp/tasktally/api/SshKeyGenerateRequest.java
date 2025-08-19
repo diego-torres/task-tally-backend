@@ -15,4 +15,7 @@ public class SshKeyGenerateRequest {
 
   /** Optional: passphrase for private key; if absent, generate unencrypted. */
   public String passphrase;
+
+  /** Optional: hostname to automatically fetch SSH host keys from (e.g., "github.com") */
+  public String hostname;
 }

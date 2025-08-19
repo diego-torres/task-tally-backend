@@ -126,7 +126,42 @@ curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: applicat
 Task‑tally can upload SSH keys and keep the sensitive bytes in a
 secret store. Postgres stores only references.
 
-1. **Upload an existing key**
+### Automatic Host Key Fetching (NEW)
+
+The system now supports automatic SSH host key fetching when creating SSH credentials. Instead of manually running `ssh-keyscan`, you can simply specify the hostname and the system will automatically fetch the host keys.
+
+#### 1. **Upload an existing key with automatic host key fetching**
+   ```bash
+   curl -X POST $BASE/api/users/user123/ssh-keys \
+     -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -d '{"name":"my-gh-key","provider":"github",\
+          "privateKeyPem":"-----BEGIN OPENSSH PRIVATE KEY-----\\n...\\n-----END OPENSSH PRIVATE KEY-----\\n",\
+          "hostname":"github.com"}'
+   ```
+
+#### 2. **Generate a new key with automatic host key fetching**
+   ```bash
+   curl -X POST $BASE/api/users/user123/ssh-keys/generate \
+     -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -d '{"name":"my-gh-key","provider":"github","hostname":"github.com"}'
+   ```
+
+#### 3. **Test host key fetching**
+   ```bash
+   # Fetch host keys from a server
+   curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+     $BASE/api/ssh/host-keys/github.com
+   
+   # Check if SSH service is available
+   curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+     $BASE/api/ssh/host-keys/github.com/check
+   ```
+
+### Manual Host Key Management (Legacy)
+
+If you prefer to manage host keys manually or need to use custom host keys:
+
+#### 1. **Upload an existing key with manual known_hosts**
    ```bash
    curl -X POST $BASE/api/users/user123/ssh-keys \
      -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -134,18 +169,41 @@ secret store. Postgres stores only references.
           "privateKeyPem":"-----BEGIN OPENSSH PRIVATE KEY-----\\n...\\n-----END OPENSSH PRIVATE KEY-----\\n",\
           "knownHosts":"github.com ssh-ed25519 AAAA...\\n"}'
    ```
-2. **Register the public key** with GitHub/GitLab as a deploy key (allow write).
-3. **Provide known_hosts**
+
+#### 2. **Provide known_hosts manually**
    ```bash
    ssh-keyscan -t ed25519 github.com >> known_hosts
    ```
-4. **Validate and delete**
+
+#### 3. **Register the public key** with GitHub/GitLab as a deploy key (allow write).
+
+#### 4. **Validate and delete**
    ```bash
    curl -X POST $BASE/api/git/ssh/validate -H "Content-Type: application/json" \
      -H "Authorization: Bearer $ACCESS_TOKEN" -d '{"provider":"github","owner":"acme","repo":"templates","branch":"main","credentialName":"my-gh-key"}'
 
    curl -X DELETE $BASE/api/users/user123/ssh-keys/my-gh-key -H "Authorization: Bearer $ACCESS_TOKEN"
   ```
+
+### Host Key Fetching Details
+
+The automatic host key fetching feature:
+
+- **Connects to SSH port 22** on the specified hostname
+- **Fetches all available host keys** (ed25519, rsa, ecdsa, etc.)
+- **Validates key format** and ensures they're properly formatted
+- **Handles connection timeouts** gracefully (10 second connection timeout, 5 second read timeout)
+- **Works with any SSH server** that supports the standard SSH protocol
+- **Is secure** - only reads host keys, never attempts authentication
+
+### Supported Hosts
+
+The system works with any SSH server, but has been tested with:
+- **GitHub** (`github.com`)
+- **GitLab** (`gitlab.com`)
+- **Bitbucket** (`bitbucket.org`)
+- **Custom Git servers** (any hostname with SSH service on port 22)
+
 The backend loads private key material into memory only when performing Git
 operations and never stores raw secrets in Postgres.
 
