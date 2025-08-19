@@ -12,11 +12,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.sshd.common.NamedResource;
+import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.config.keys.loader.openssh.OpenSSHKeyPairResourceParser;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyEncryptionContext;
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter;
-import org.apache.sshd.common.util.io.resource.IoResource;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -32,12 +33,6 @@ import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class SshKeyService {
-  static {
-    // Register EdDSA provider once at class load
-    if (java.security.Security.getProvider("EdDSA") == null) {
-      java.security.Security.addProvider(new net.i2p.crypto.eddsa.EdDSASecurityProvider());
-    }
-  }
   private static final Logger LOG = Logger.getLogger(SshKeyService.class);
   private static final Set<String> ALLOWED_PROVIDERS = Set.of("github", "gitlab");
 
@@ -136,13 +131,8 @@ public class SshKeyService {
     }
 
     try {
-      KeyPairGenerator kpg;
-      try {
-        kpg = KeyPairGenerator.getInstance("Ed25519");
-      } catch (GeneralSecurityException ignore) {
-        // fallback to EdDSA provider if default not available
-        kpg = KeyPairGenerator.getInstance("Ed25519", "EdDSA");
-      }
+      // remove: addProvider/getProvider, EdDSA imports, and manual initialization
+      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
       KeyPair kp = kpg.generateKeyPair();
       byte[] privateOpenSsh = writeOpenSshPrivateKey(kp, req.passphrase);
 
@@ -173,7 +163,7 @@ public class SshKeyService {
       throw new IllegalStateException("missing secret ref");
     }
     if (privRef.startsWith("k8s:secret/")) {
-      String pubRef = privRef.replace("#id_ed25519", "#id_ed25519.pub");
+      String pubRef = privRef.replaceFirst("#id_ed25519$", "#id_ed25519.pub");
       try {
         byte[] pub = secretResolver.resolveBytes(pubRef);
         if (pub != null && pub.length > 0) {
@@ -184,9 +174,15 @@ public class SshKeyService {
       }
       try {
         byte[] priv = secretResolver.resolveBytes(privRef);
-        Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null,
-            (IoResource<?>) new ByteArrayInputStream(priv), null);
-        KeyPair kp = keys.iterator().next();
+        NamedResource named = NamedResource.ofName("id_ed25519");
+        FilePasswordProvider fpp = cred.passphraseRef != null
+            ? FilePasswordProvider.of(secretResolver.resolve(cred.passphraseRef))
+            : FilePasswordProvider.EMPTY;
+        KeyPair kp;
+        try (ByteArrayInputStream in = new ByteArrayInputStream(priv)) {
+          Iterable<KeyPair> keys = OpenSSHKeyPairResourceParser.INSTANCE.loadKeyPairs(null, named, fpp, in);
+          kp = keys.iterator().next();
+        }
         String publicLine = buildOpenSshPublic(kp.getPublic(), userId, null);
         byte[] publicBytes = (publicLine + "\n").getBytes(StandardCharsets.UTF_8);
         char[] passphrase = cred.passphraseRef != null
@@ -209,7 +205,8 @@ public class SshKeyService {
         writer.writePrivateKey(kp, null, null, bos);
       } else {
         OpenSSHKeyEncryptionContext enc = new OpenSSHKeyEncryptionContext();
-        enc.setCipherName("aes256-ctr");
+        // Use a cipher accepted by this sshd for OpenSSH key encryption
+        enc.setCipherName("aes256-cbc");
         enc.setKdfRounds(getConfiguredKdfRounds());
         enc.setPassword(passphrase);
         writer.writePrivateKey(kp, null, enc, bos);
