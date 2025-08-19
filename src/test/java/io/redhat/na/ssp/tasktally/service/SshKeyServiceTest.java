@@ -1,8 +1,10 @@
 package io.redhat.na.ssp.tasktally.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -147,5 +149,51 @@ public class SshKeyServiceTest {
 
     service.delete(TEST_USER_ID, "k1");
     assertEquals(0, service.list(TEST_USER_ID).size());
+  }
+
+  @Test
+  @Transactional
+  public void publicKeyFormatIsCorrect() {
+    AtomicReference<byte[]> priv = new AtomicReference<>();
+    AtomicReference<byte[]> pub = new AtomicReference<>();
+    when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+      priv.set(inv.getArgument(2));
+      pub.set(inv.getArgument(3));
+      return new SshSecretRefs("k8s:secret/tasktally-ssh-u1-format-test#id_ed25519", null, null);
+    });
+    when(resolver.resolveBytes(any())).thenAnswer(inv -> pub.get());
+
+    SshKeyGenerateRequest req = new SshKeyGenerateRequest();
+    req.name = "format-test";
+    req.provider = "github";
+    req.comment = "test@example.com";
+
+    CredentialRef cred = service.generate(TEST_USER_ID, req);
+    assertNotNull(cred);
+
+    String pk = service.getPublicKey(TEST_USER_ID, "format-test");
+
+    // Verify the format matches OpenSSH public key format
+    assertTrue(pk.startsWith("ssh-ed25519 "), "Public key should start with 'ssh-ed25519 '");
+    assertTrue(pk.contains(" "), "Public key should contain spaces separating parts");
+
+    // Split the key into parts
+    String[] parts = pk.split(" ");
+    assertEquals(3, parts.length, "Public key should have exactly 3 parts: type, key, comment");
+    assertEquals("ssh-ed25519", parts[0], "First part should be 'ssh-ed25519'");
+    assertTrue(parts[1].length() > 0, "Key part should not be empty");
+    assertEquals("test@example.com", parts[2], "Comment should match the provided comment");
+
+    // Verify the key part is valid base64
+    try {
+      java.util.Base64.getDecoder().decode(parts[1]);
+    } catch (IllegalArgumentException e) {
+      fail("Key part should be valid base64: " + e.getMessage());
+    }
+
+    // Verify no extra whitespace or newlines
+    assertEquals(pk.trim(), pk, "Public key should not have leading/trailing whitespace");
+    assertFalse(pk.contains("\n"), "Public key should not contain newlines");
+    assertFalse(pk.contains("\r"), "Public key should not contain carriage returns");
   }
 }

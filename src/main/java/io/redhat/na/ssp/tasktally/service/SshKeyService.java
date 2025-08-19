@@ -246,7 +246,39 @@ public class SshKeyService {
   private String buildOpenSshPublic(java.security.PublicKey pub, String userId, String comment) {
     String c = (comment == null || comment.isBlank()) ? "task-tally@" + userId : comment.trim();
     String keyType = "ssh-ed25519";
-    String encoded = java.util.Base64.getEncoder().encodeToString(pub.getEncoded());
+
+    // Convert to OpenSSH wire format
+    byte[] sshKeyBytes;
+    if (pub instanceof java.security.interfaces.EdECPublicKey) {
+      // For Ed25519, we need to extract the raw key bytes and format them for SSH
+      java.security.interfaces.EdECPublicKey edKey = (java.security.interfaces.EdECPublicKey) pub;
+      java.security.spec.EdECPoint point = edKey.getPoint();
+      byte[] rawKey = point.getY().toByteArray();
+
+      // SSH wire format: string "ssh-ed25519" + string key_data
+      byte[] keyTypeBytes = keyType.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      sshKeyBytes = new byte[4 + keyTypeBytes.length + 4 + rawKey.length];
+
+      // Write key type length and key type
+      sshKeyBytes[0] = (byte) ((keyTypeBytes.length >> 24) & 0xFF);
+      sshKeyBytes[1] = (byte) ((keyTypeBytes.length >> 16) & 0xFF);
+      sshKeyBytes[2] = (byte) ((keyTypeBytes.length >> 8) & 0xFF);
+      sshKeyBytes[3] = (byte) (keyTypeBytes.length & 0xFF);
+      System.arraycopy(keyTypeBytes, 0, sshKeyBytes, 4, keyTypeBytes.length);
+
+      // Write key data length and key data
+      int keyDataOffset = 4 + keyTypeBytes.length;
+      sshKeyBytes[keyDataOffset] = (byte) ((rawKey.length >> 24) & 0xFF);
+      sshKeyBytes[keyDataOffset + 1] = (byte) ((rawKey.length >> 16) & 0xFF);
+      sshKeyBytes[keyDataOffset + 2] = (byte) ((rawKey.length >> 8) & 0xFF);
+      sshKeyBytes[keyDataOffset + 3] = (byte) (rawKey.length & 0xFF);
+      System.arraycopy(rawKey, 0, sshKeyBytes, keyDataOffset + 4, rawKey.length);
+    } else {
+      // Fallback for other key types
+      sshKeyBytes = pub.getEncoded();
+    }
+
+    String encoded = java.util.Base64.getEncoder().encodeToString(sshKeyBytes);
     return keyType + " " + encoded + " " + c;
   }
 

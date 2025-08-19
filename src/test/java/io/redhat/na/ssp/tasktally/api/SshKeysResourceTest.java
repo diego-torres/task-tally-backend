@@ -22,6 +22,10 @@ import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 @QuarkusTest
 public class SshKeysResourceTest {
   @org.junit.jupiter.api.AfterEach
@@ -141,5 +145,50 @@ public class SshKeysResourceTest {
   public void publicKeyNotFound404() {
     cleanupUserKeys("u1");
     given().get("/api/users/u1/ssh-keys/missing/public").then().statusCode(404);
+  }
+
+  @Test
+  @TestSecurity(user = "u1", roles = {"user"})
+  public void publicKeyApiResponseFormat() {
+    cleanupUserKeys("u1");
+    AtomicReference<byte[]> pub = new AtomicReference<>();
+    String uniqueName = "api-format-test-" + java.util.UUID.randomUUID();
+    when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+      pub.set(inv.getArgument(3));
+      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_ed25519", null, null);
+    });
+    when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
+
+    String body = String.format("{\"name\":\"%s\",\"provider\":\"github\",\"comment\":\"test@example.com\"}",
+        uniqueName);
+    given().contentType("application/json").body(body).post("/api/users/u1/ssh-keys/generate").then().statusCode(201);
+
+    // Test the public key endpoint response
+    given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().statusCode(200)
+        .body("publicKey", startsWith("ssh-ed25519 ")).body("publicKey", not(emptyOrNullString()))
+        .body("fingerprintSha256", not(emptyOrNullString())).body("name", equalTo(uniqueName))
+        .body("provider", equalTo("github"));
+
+    // Get the actual response to verify the format
+    String response = given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().extract().asString();
+    System.out.println("API Response: " + response);
+
+    // Verify the public key format in the response
+    String publicKey = given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().extract().jsonPath()
+        .getString("publicKey");
+    System.out.println("Public Key: '" + publicKey + "'");
+
+    // Verify the key format is correct for GitHub
+    assertTrue(publicKey.startsWith("ssh-ed25519 "), "Public key should start with 'ssh-ed25519 '");
+    String[] parts = publicKey.split(" ");
+    assertEquals(3, parts.length, "Public key should have exactly 3 parts");
+    assertEquals("ssh-ed25519", parts[0], "First part should be 'ssh-ed25519'");
+    assertTrue(parts[1].length() > 0, "Key part should not be empty");
+    assertEquals("test@example.com", parts[2], "Comment should match");
+
+    // Verify no extra characters
+    assertFalse(publicKey.contains("\n"), "Public key should not contain newlines");
+    assertFalse(publicKey.contains("\r"), "Public key should not contain carriage returns");
+    assertFalse(publicKey.contains("\t"), "Public key should not contain tabs");
   }
 }
