@@ -1,11 +1,17 @@
 package io.redhat.na.ssp.tasktally.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
@@ -20,10 +26,6 @@ import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 public class SshKeyServiceTest {
@@ -40,8 +42,6 @@ public class SshKeyServiceTest {
   @InjectMock
   SecretResolver resolver;
 
-  private UserPreferences testUserPrefs;
-
   @BeforeEach
   @Transactional
   public void setUp() {
@@ -51,7 +51,7 @@ public class SshKeyServiceTest {
     userPreferencesRepository.findByUserId(TEST_USER_ID).ifPresent(userPreferencesRepository::delete);
 
     // Create test user preferences
-    testUserPrefs = userPreferencesRepository.findByUserId(TEST_USER_ID).orElseGet(() -> {
+    userPreferencesRepository.findByUserId(TEST_USER_ID).orElseGet(() -> {
       UserPreferences userPrefs = new UserPreferences();
       userPrefs.userId = TEST_USER_ID;
       userPrefs.ui = new java.util.HashMap<>();
