@@ -23,6 +23,12 @@ public final class TaskTallySshdSessionFactory {
     java.nio.file.Path keyFile = tempDir.resolve("id_ed25519");
     java.nio.file.Files.write(keyFile, privateKey, java.nio.file.StandardOpenOption.CREATE);
 
+    // Set proper permissions on the private key file (600)
+    keyFile.toFile().setReadable(false, false);
+    keyFile.toFile().setReadable(true, true);
+    keyFile.toFile().setWritable(false, false);
+    keyFile.toFile().setWritable(true, true);
+
     // Write known_hosts to temp dir
     java.nio.file.Path knownHostsFile = tempDir.resolve("known_hosts");
 
@@ -43,11 +49,22 @@ public final class TaskTallySshdSessionFactory {
 
     java.nio.file.Files.write(knownHostsFile, hostsToWrite, java.nio.file.StandardOpenOption.CREATE);
 
-    // Optionally write passphrase to a file if needed (JGit does not support this directly)
+    // Set proper permissions on the known_hosts file (644)
+    knownHostsFile.toFile().setReadable(true, true);
+    knownHostsFile.toFile().setWritable(true, true);
+
+    // Create SSH config file to ensure proper host key checking
+    java.nio.file.Path configFile = tempDir.resolve("config");
+    String configContent = "Host github.com\n" + "  HostName github.com\n" + "  User git\n"
+        + "  IdentityFile ~/.ssh/id_ed25519\n" + "  StrictHostKeyChecking yes\n"
+        + "  UserKnownHostsFile ~/.ssh/known_hosts\n";
+    java.nio.file.Files.write(configFile, configContent.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+        java.nio.file.StandardOpenOption.CREATE);
 
     SshdSessionFactoryBuilder builder = new SshdSessionFactoryBuilder();
     builder.setHomeDirectory(tempDir.toFile());
     builder.setSshDirectory(tempDir.toFile());
+
     return builder.build(null);
   }
 }
