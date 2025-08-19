@@ -12,33 +12,65 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
 import io.redhat.na.ssp.tasktally.api.SshKeyGenerateRequest;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
+import io.redhat.na.ssp.tasktally.model.UserPreferences;
+import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;
+import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
 import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 public class SshKeyServiceTest {
-  @org.junit.jupiter.api.AfterEach
-  public void tearDown() {
-    for (CredentialRef cred : store.list("u1")) {
-      store.remove("u1", cred.name);
-    }
-  }
+  private static final String TEST_USER_ID = "u1";
 
   @Inject
   SshKeyService service;
   @Inject
-  CredentialStore store;
+  CredentialRefRepository credentialRefRepository;
+  @Inject
+  UserPreferencesRepository userPreferencesRepository;
   @InjectMock
   SecretWriter writer;
   @InjectMock
   SecretResolver resolver;
 
+  private UserPreferences testUserPrefs;
+
+  @BeforeEach
+  @Transactional
+  public void setUp() {
+    // Clean up any existing test data
+    credentialRefRepository.find("userPreferences.userId", TEST_USER_ID).list()
+        .forEach(credentialRefRepository::delete);
+    userPreferencesRepository.findByUserId(TEST_USER_ID).ifPresent(userPreferencesRepository::delete);
+
+    // Create test user preferences
+    testUserPrefs = userPreferencesRepository.findByUserId(TEST_USER_ID).orElseGet(() -> {
+      UserPreferences userPrefs = new UserPreferences();
+      userPrefs.userId = TEST_USER_ID;
+      userPrefs.ui = new java.util.HashMap<>();
+      userPreferencesRepository.persist(userPrefs);
+      return userPrefs;
+    });
+  }
+
+  @org.junit.jupiter.api.AfterEach
+  @Transactional
+  public void tearDown() {
+    // Clean up test data
+    credentialRefRepository.find("userPreferences.userId", TEST_USER_ID).list()
+        .forEach(credentialRefRepository::delete);
+    userPreferencesRepository.findByUserId(TEST_USER_ID).ifPresent(userPreferencesRepository::delete);
+  }
+
   @Test
+  @Transactional
   public void createStoresCredential() {
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any()))
         .thenReturn(new SshSecretRefs("ref1", "kh", null));
@@ -47,13 +79,14 @@ public class SshKeyServiceTest {
     req.provider = "github";
     req.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAA\n-----END OPENSSH PRIVATE KEY-----\n";
     req.knownHosts = "github.com ssh-ed25519 AAAA\n";
-    CredentialRef cred = service.create("u1", req);
+    CredentialRef cred = service.create(TEST_USER_ID, req);
     assertEquals("ref1", cred.secretRef);
-    assertEquals(1, store.list("u1").size());
+    assertEquals(1, service.list(TEST_USER_ID).size());
     verify(writer).writeSshKey(any(), any(), any(), any(), any(), any());
   }
 
   @Test
+  @Transactional
   public void generateWithoutPassphrase() {
     AtomicReference<byte[]> priv = new AtomicReference<>();
     AtomicReference<byte[]> pub = new AtomicReference<>();
@@ -67,15 +100,16 @@ public class SshKeyServiceTest {
     SshKeyGenerateRequest req = new SshKeyGenerateRequest();
     req.name = "unique_no_passphrase";
     req.provider = "github";
-    CredentialRef cred = service.generate("u1", req);
+    CredentialRef cred = service.generate(TEST_USER_ID, req);
     assertNotNull(cred);
-    String pk = service.getPublicKey("u1", "unique_no_passphrase");
+    String pk = service.getPublicKey(TEST_USER_ID, "unique_no_passphrase");
     assertTrue(pk.startsWith("ssh-ed25519 "));
     String privStr = new String(priv.get(), StandardCharsets.UTF_8);
     assertTrue(privStr.startsWith("-----BEGIN PRIVATE KEY-----"));
   }
 
   @Test
+  @Transactional
   public void knownHostsEndsWithNewline() {
     AtomicReference<byte[]> kh = new AtomicReference<>();
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
@@ -86,8 +120,32 @@ public class SshKeyServiceTest {
     req.name = "kh";
     req.provider = "github";
     req.knownHosts = "github.com ssh-ed25519 AAAA";
-    service.generate("u1", req);
+    service.generate(TEST_USER_ID, req);
     assertNotNull(kh.get());
     assertEquals('\n', kh.get()[kh.get().length - 1]);
+  }
+
+  @Test
+  @Transactional
+  public void listReturnsEmptyForNewUser() {
+    assertEquals(0, service.list(TEST_USER_ID).size());
+  }
+
+  @Test
+  @Transactional
+  public void deleteRemovesCredential() {
+    when(writer.writeSshKey(any(), any(), any(), any(), any(), any()))
+        .thenReturn(new SshSecretRefs("ref1", "kh", null));
+
+    SshKeyCreateRequest req = new SshKeyCreateRequest();
+    req.name = "k1";
+    req.provider = "github";
+    req.privateKeyPem = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAA\n-----END OPENSSH PRIVATE KEY-----\n";
+
+    service.create(TEST_USER_ID, req);
+    assertEquals(1, service.list(TEST_USER_ID).size());
+
+    service.delete(TEST_USER_ID, "k1");
+    assertEquals(0, service.list(TEST_USER_ID).size());
   }
 }

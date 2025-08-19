@@ -21,12 +21,16 @@ import org.jboss.logging.Logger;
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
 import io.redhat.na.ssp.tasktally.api.SshKeyGenerateRequest;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
+import io.redhat.na.ssp.tasktally.model.UserPreferences;
+import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;
+import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
 import io.redhat.na.ssp.tasktally.secret.SecretResolver;
 import io.redhat.na.ssp.tasktally.secrets.SecretWriter;
 import io.redhat.na.ssp.tasktally.secrets.SshKeyValidator;
 import io.redhat.na.ssp.tasktally.secrets.SshSecretRefs;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class SshKeyService {
@@ -36,17 +40,24 @@ public class SshKeyService {
   @Inject
   SecretWriter secretWriter;
   @Inject
-  CredentialStore store;
+  CredentialRefRepository credentialRefRepository;
+  @Inject
+  UserPreferencesRepository userPreferencesRepository;
   @Inject
   SecretResolver secretResolver;
 
   @ConfigProperty(name = "ssh.encryption.required", defaultValue = "false")
   boolean encryptionRequired;
 
+  @Transactional
   public List<CredentialRef> list(String userId) {
-    return store.list(userId);
+    LOG.debugf("Listing SSH credentials for user: %s", userId);
+    List<CredentialRef> credentials = credentialRefRepository.findByUserId(userId);
+    LOG.debugf("Found %d SSH credentials for user: %s", credentials.size(), userId);
+    return credentials;
   }
 
+  @Transactional
   public CredentialRef create(String userId, SshKeyCreateRequest req) {
     if (req == null) {
       throw new IllegalArgumentException("request required");
@@ -55,9 +66,12 @@ public class SshKeyService {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("name is required");
     }
-    if (store.find(userId, name).isPresent()) {
+
+    UserPreferences userPrefs = getUserPreferences(userId);
+    if (credentialRefRepository.findByUserAndName(userPrefs.id, name).isPresent()) {
       throw new IllegalStateException("credential already exists");
     }
+
     String provider = req.provider != null ? req.provider.trim().toLowerCase(Locale.ROOT) : null;
     if (provider == null || !ALLOWED_PROVIDERS.contains(provider)) {
       throw new IllegalArgumentException("provider must be github or gitlab");
@@ -72,6 +86,7 @@ public class SshKeyService {
     SshSecretRefs refs = secretWriter.writeSshKey(userId, name, priv, null, pp, kh);
 
     CredentialRef cred = new CredentialRef();
+    cred.userPreferences = userPrefs;
     cred.name = name;
     cred.provider = provider;
     cred.scope = "write";
@@ -79,13 +94,19 @@ public class SshKeyService {
     cred.knownHostsRef = refs.knownHostsRef();
     cred.passphraseRef = refs.passphraseRef();
     cred.createdAt = Instant.now();
-    store.put(userId, cred);
+
+    credentialRefRepository.persist(cred);
+    LOG.infof("Created SSH credential %s for user %s", name, userId);
     return cred;
   }
 
+  @Transactional
   public void delete(String userId, String name) {
     String trimmedName = name != null ? name.trim() : null;
-    CredentialRef cred = store.find(userId, trimmedName).orElseThrow(() -> new IllegalArgumentException("not found"));
+    UserPreferences userPrefs = getUserPreferences(userId);
+    CredentialRef cred = credentialRefRepository.findByUserAndName(userPrefs.id, trimmedName)
+        .orElseThrow(() -> new IllegalArgumentException("not found"));
+
     try {
       secretWriter.deleteByRef(cred.secretRef);
       secretWriter.deleteByRef(cred.knownHostsRef);
@@ -93,14 +114,20 @@ public class SshKeyService {
     } catch (Exception e) {
       LOG.warn("Failed to delete secret", e);
     }
-    store.remove(userId, trimmedName);
+
+    credentialRefRepository.delete(cred);
+    LOG.infof("Deleted SSH credential %s for user %s", trimmedName, userId);
   }
 
+  @Transactional
   public CredentialRef get(String userId, String name) {
     String trimmedName = name != null ? name.trim() : null;
-    return store.find(userId, trimmedName).orElseThrow(() -> new IllegalArgumentException("not found"));
+    UserPreferences userPrefs = getUserPreferences(userId);
+    return credentialRefRepository.findByUserAndName(userPrefs.id, trimmedName)
+        .orElseThrow(() -> new IllegalArgumentException("not found"));
   }
 
+  @Transactional
   public CredentialRef generate(String userId, SshKeyGenerateRequest req) {
     if (req == null) {
       throw new IllegalArgumentException("request required");
@@ -109,9 +136,12 @@ public class SshKeyService {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("name is required");
     }
-    if (store.find(userId, name).isPresent()) {
+
+    UserPreferences userPrefs = getUserPreferences(userId);
+    if (credentialRefRepository.findByUserAndName(userPrefs.id, name).isPresent()) {
       throw new IllegalStateException("credential already exists");
     }
+
     String provider = req.provider != null ? req.provider.trim().toLowerCase(Locale.ROOT) : null;
     if (provider == null || !ALLOWED_PROVIDERS.contains(provider)) {
       throw new IllegalArgumentException("provider must be github or gitlab");
@@ -137,6 +167,7 @@ public class SshKeyService {
       SshSecretRefs refs = secretWriter.writeSshKey(userId, name, privatePem, publicOpenSsh, pp, khRaw);
 
       CredentialRef cred = new CredentialRef();
+      cred.userPreferences = userPrefs;
       cred.name = name;
       cred.provider = provider;
       cred.scope = "write";
@@ -144,7 +175,9 @@ public class SshKeyService {
       cred.knownHostsRef = refs.knownHostsRef();
       cred.passphraseRef = refs.passphraseRef();
       cred.createdAt = Instant.now();
-      store.put(userId, cred);
+
+      credentialRefRepository.persist(cred);
+      LOG.infof("Generated SSH credential %s for user %s", name, userId);
       return cred;
     } catch (GeneralSecurityException e) {
       throw new IllegalStateException("failed to generate key", e);
@@ -191,6 +224,17 @@ public class SshKeyService {
       }
     }
     throw new IllegalStateException("unsupported secret backend");
+  }
+
+  private UserPreferences getUserPreferences(String userId) {
+    return userPreferencesRepository.findByUserId(userId).orElseGet(() -> {
+      UserPreferences userPrefs = new UserPreferences();
+      userPrefs.userId = userId;
+      userPrefs.ui = new java.util.HashMap<>();
+      userPreferencesRepository.persist(userPrefs);
+      LOG.debugf("Created new UserPreferences for user: %s", userId);
+      return userPrefs;
+    });
   }
 
   private byte[] writePkcs8Pem(PrivateKey privateKey) {

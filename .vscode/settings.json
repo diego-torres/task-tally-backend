@@ -6,6 +6,7 @@
     "mp.openapi.schema.*",
     "kafka-streams.*",
     "camel.*",
-    "quarkus.*"
+    "quarkus.*",
+    "ssh.kdf.*"
   ]
 }

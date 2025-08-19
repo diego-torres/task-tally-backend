@@ -12,4 +12,8 @@ public class CredentialRefRepository implements PanacheRepository<CredentialRef>
   public Optional<CredentialRef> findByUserAndName(Long userPreferencesId, String name) {
     return find("userPreferences.id = ?1 and name = ?2", userPreferencesId, name).firstResultOptional();
   }
+
+  public java.util.List<CredentialRef> findByUserId(String userId) {
+    return find("userPreferences.userId", userId).list();
+  }
 }
