@@ -1,25 +1,28 @@
 package io.redhat.na.ssp.tasktally.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
 import io.redhat.na.ssp.tasktally.model.Outcome;
 import io.redhat.na.ssp.tasktally.model.Template;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
 import io.redhat.na.ssp.tasktally.repo.TemplateRepository;
 import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.ArrayList;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 @QuarkusTest
 class OutcomeServiceTest {

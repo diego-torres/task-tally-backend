@@ -1,29 +1,22 @@
 package io.redhat.na.ssp.tasktally.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.redhat.na.ssp.tasktally.model.Outcome;
-import io.redhat.na.ssp.tasktally.model.Template;
-import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.secrets.SecretResolver;
-import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.jboss.logging.Logger;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
+import io.redhat.na.ssp.tasktally.github.ssh.SshGitService;
+import io.redhat.na.ssp.tasktally.model.CredentialRef;
+import io.redhat.na.ssp.tasktally.model.Outcome;
+import io.redhat.na.ssp.tasktally.model.Template;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class GitYamlService {
