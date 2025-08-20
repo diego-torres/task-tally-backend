@@ -20,7 +20,6 @@ import org.jboss.logging.Logger;
 
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
 import io.redhat.na.ssp.tasktally.api.SshKeyGenerateRequest;
-import io.redhat.na.ssp.tasktally.github.ssh.TaskTallySshdSessionFactory;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
 import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;

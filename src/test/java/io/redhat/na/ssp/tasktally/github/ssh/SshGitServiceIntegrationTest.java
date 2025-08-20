@@ -1,17 +1,18 @@
 package io.redhat.na.ssp.tasktally.github.ssh;
 
-import io.redhat.na.ssp.tasktally.model.CredentialRef;
-import io.redhat.na.ssp.tasktally.secret.SecretResolver;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.jboss.logging.Logger;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
-import java.util.Base64;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import io.quarkus.test.junit.QuarkusTest;
+import io.redhat.na.ssp.tasktally.model.CredentialRef;
+import io.redhat.na.ssp.tasktally.secret.SecretResolver;
+import jakarta.inject.Inject;
 
 @QuarkusTest
 public class SshGitServiceIntegrationTest {

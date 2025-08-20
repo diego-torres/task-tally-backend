@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.DumperOptions;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,7 +35,14 @@ public class TemplateService {
   @Inject
   SshKeyService sshKeyService;
 
-  private final Yaml yaml = new Yaml();
+  private final Yaml yaml;
+
+  public TemplateService() {
+    DumperOptions options = new DumperOptions();
+    options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+    options.setExplicitStart(true);
+    this.yaml = new Yaml(options);
+  }
 
   @Transactional
   public List<Template> list(String userId) {
@@ -130,7 +138,7 @@ public class TemplateService {
     LOG.infof("Deleted template %d for user %s", templateId, userId);
   }
 
-  private void syncRepo(Template tmpl) {
+  void syncRepo(Template tmpl) {
     try {
       LOG.debugf("Syncing repository %s", tmpl.repositoryUrl);
       Path work = Files.createTempDirectory("tmpl-repo");

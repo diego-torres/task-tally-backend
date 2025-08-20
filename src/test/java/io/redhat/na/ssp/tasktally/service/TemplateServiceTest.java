@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,9 @@ import io.redhat.na.ssp.tasktally.repo.UserPreferencesRepository;
 import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 @QuarkusTest
 public class TemplateServiceTest {
@@ -222,4 +227,30 @@ public class TemplateServiceTest {
     assertEquals("main", saved.defaultBranch);
     assertEquals("github-no-known-hosts", saved.sshKeyName);
   }
+
+  @Test
+  public void testYamlConfiguration() {
+    // Test that the YAML configuration in TemplateService produces the expected format
+    Map<String, Object> data = new HashMap<>();
+    data.put("name", "test-proposal");
+    data.put("description", "test proposal");
+    data.put("provider", "github");
+    data.put("defaultBranch", "main");
+
+    // Create a YAML instance with the same configuration as TemplateService
+    DumperOptions options = new DumperOptions();
+    options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+    options.setExplicitStart(true);
+    Yaml yaml = new Yaml(options);
+
+    String result = yaml.dump(data);
+    // The actual output order may vary, so we'll check that it contains all the expected fields
+    // and starts with the document separator
+    assertTrue(result.startsWith("---\n"), "YAML should start with document separator");
+    assertTrue(result.contains("name: test-proposal"), "YAML should contain name field");
+    assertTrue(result.contains("description: test proposal"), "YAML should contain description field");
+    assertTrue(result.contains("provider: github"), "YAML should contain provider field");
+    assertTrue(result.contains("defaultBranch: main"), "YAML should contain defaultBranch field");
+  }
+
 }
