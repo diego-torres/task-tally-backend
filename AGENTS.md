@@ -31,6 +31,7 @@ Shared rules and reusable snippets for building **Task-tally** agents (e.g., Cod
 - **Git:** 
   - Prefer GitHub REST API or App installation tokens.  
   - Allow **SSH transport** when user has uploaded an SSH key (resolved from secret store).
+  - **Templates and Outcomes:** Stored as YAML files in Git repositories, not in database.
 - **Kubernetes:** 12-factor config via env vars; health checks; readiness/liveness; graceful shutdown.
 
 ---
@@ -51,6 +52,9 @@ Other rules unchanged (see base version).
   ```
   (userId=123, name='gitlab-ssh', provider='SSH_KEY', scope='repo', secretRef='k8s:secret/tasktally-ssh-123#id_rsa')
   ```
+- **Templates:** Store Git repository references (URL, branch, SSH key name, YAML path).
+- **Outcomes:** Stored in Git repositories as YAML files, not in database.
+- **YAML Structure:** Outcomes follow the structure defined in the specification with phase objects containing name, track, product, and environment.
 
 ---
 
@@ -74,6 +78,16 @@ POST /api/preferences/me/ssh-keys {name, privateKeyPem}
 DELETE /api/preferences/me/ssh-keys/{name} → remove.
 Update GitService to support SSH by resolving privateKeyPem via SecretResolver and wiring to JGit SshSessionFactory.
 Ensure no key material is persisted in DB or logs.
+```
+
+### I) Git-based YAML Storage (NEW)
+```
+Templates and outcomes are stored in Git repositories as YAML files, not in database.
+- Templates: Store Git repository references (URL, branch, SSH key name, YAML path).
+- Outcomes: Stored as outcomes.yml files in Git repositories.
+- YAML Structure: Follows the specification with phase objects containing name, track, product, environment.
+- Git Operations: Use SshGitService for clone, commit, and push operations.
+- No Database Repositories: Do not create database repositories for outcomes or templates data.
 ```
 
 ---

@@ -23,6 +23,39 @@ This is a Quarkus-based Java 17 backend for Task-tally, a task management system
 - **Formatting**: Follow the project's eclipse-formatter.xml configuration
 - **Error handling**: Use JSON error envelope + request ID pattern
 
+## Git-based YAML Storage (CRITICAL)
+
+### Templates and Outcomes Storage
+- **Templates**: Store Git repository references in database (URL, branch, SSH key name, YAML path)
+- **Outcomes**: Stored in Git repositories as YAML files, NOT in database
+- **YAML Structure**: Follow the specification with phase objects containing name, track, product, environment
+
+### When Working with Models, DTOs, or APIs
+- **DO NOT create database repositories** for outcomes or templates data
+- **DO expect backend details to be stored in Git repositories** as YAML files
+- **DO use GitYamlService** for reading/writing outcomes to Git repositories
+- **DO use SshGitService** for Git operations (clone, commit, push)
+- **DO follow the YAML structure** specified in the requirements
+
+### YAML Structure Example
+```yaml
+outcomes:
+  - outcome:
+      phase:
+        name: phase name
+        track: track name
+        product: product name
+        environment: environment name
+      prefix: some prefix description
+      description: the long description of an outcome here
+      notes: some scoping notes here
+```
+
+### Database Schema
+- **Templates table**: Contains Git repository references, not the actual template data
+- **No outcomes table**: Outcomes are stored in Git repositories
+- **Credential references**: Store SSH key references for Git operations
+
 ## Collaboration Rules
 
 ### Testing Approach
@@ -59,6 +92,7 @@ This is a Quarkus-based Java 17 backend for Task-tally, a task management system
 3. **Documentation**: Update relevant documentation
 4. **Migration**: Include Flyway migrations if schema changes needed
 5. **API consistency**: Follow existing API patterns and error handling
+6. **Git-based storage**: Remember that outcomes and templates are stored in Git, not database
 
 ## Reference Files
 - `AGENTS.md` - Detailed technical specifications
@@ -66,4 +100,4 @@ This is a Quarkus-based Java 17 backend for Task-tally, a task management system
 - `application.properties` - Application configuration
 - `eclipse-formatter.xml` - Code formatting rules
 
-Remember: Security and testing are non-negotiable. Always prioritize these aspects in any code generation or modification.
+Remember: Security, testing, and Git-based YAML storage are non-negotiable. Always prioritize these aspects in any code generation or modification.

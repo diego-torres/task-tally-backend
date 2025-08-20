@@ -37,6 +37,9 @@ public class Template extends PanacheEntityBase {
   @Column(name = "ssh_key_name")
   public String sshKeyName;
 
+  @Column(name = "yaml_path")
+  public String yamlPath = "outcomes.yml";
+
   @Column(name = "created_at")
   public Instant createdAt;
 

@@ -2,6 +2,26 @@
 
 
 Minimal Quarkus starter for Task‑tally. Provides REST APIs for user preferences, credential references and Git template operations over SSH.
+
+## Architecture Overview
+
+Task-tally is a task management system with GitHub integration, PostgreSQL persistence, and Kubernetes deployment.
+
+### Git-based YAML Storage
+
+Templates and their outcomes are stored in Git repositories as YAML files, not in the database:
+
+- **Templates**: Database stores Git repository references (URL, branch, SSH key name, YAML path)
+- **Outcomes**: Stored as `outcomes.yml` files in Git repositories with structured YAML format
+- **Git Operations**: Uses SSH for secure Git operations with stored SSH keys
+- **YAML Structure**: Follows the specification with phase objects containing name, track, product, and environment
+
+This approach provides:
+- **Version Control**: All changes are tracked in Git history
+- **Collaboration**: Multiple users can work on the same templates
+- **Backup**: Git repositories serve as natural backup
+- **Audit Trail**: Complete history of all changes
+- **Flexibility**: YAML format allows for easy editing and review
 ## Quickstart: Local Development Environment
 
 ### 1. Start All Services with Docker Compose
@@ -100,6 +120,31 @@ activities:
     estimateHours: 4
 ```
 
+## Example Outcomes YAML Structure
+Outcomes are stored in Git repositories as `outcomes.yml` files with the following structure:
+
+```yaml
+outcomes:
+  - outcome:
+      phase:
+        name: phase name
+        track: track name
+        product: product name
+        environment: environment name
+      prefix: some prefix description
+      description: the long description of an outcome here
+      notes: some scoping notes here
+  - outcome:
+      phase:
+        name: another phase
+        track: another track
+        product: another product
+        environment: another environment
+      prefix: another prefix
+      description: another outcome description
+      notes: more scoping notes
+```
+
 ## API examples
 Assuming the application runs on `localhost:8080`.
 
@@ -119,6 +164,26 @@ curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: applicat
 curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
   -d '{"repoUri":"git@github.com:o/r.git","path":"templates","branch":"main"}' \
   http://localhost:8080/api/git/templates/pull
+
+# Manage outcomes (stored in Git repositories as YAML)
+# List outcomes for a template
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+  http://localhost:8080/api/users/alice/templates/1/outcomes
+
+# Create a new outcome
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+  -d '{
+    "phase": {
+      "name": "Discovery",
+      "track": "Infrastructure",
+      "product": "OpenShift",
+      "environment": "Production"
+    },
+    "prefix": "INFRA-001",
+    "description": "Infrastructure assessment completed",
+    "notes": "Focus on scalability and security"
+  }' \
+  http://localhost:8080/api/users/alice/templates/1/outcomes
 ```
 
 ## Using SSH Keys
