@@ -57,9 +57,18 @@ public class SshHostKeyResource {
       LOG.errorf("Invalid hostname %s: %s", hostname, e.getMessage());
       return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorResponse(e.getMessage())).build();
     } catch (IOException e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.contains("timeout")) {
+        errorMessage = "Connection timeout to " + hostname + ". Please check your network connection and try again.";
+      } else if (errorMessage != null && errorMessage.contains("Connection failed")) {
+        errorMessage = "Failed to connect to " + hostname
+            + ". Please check if the host is reachable and SSH service is available.";
+      } else {
+        errorMessage = "Failed to fetch host keys from " + hostname + ": " + errorMessage;
+      }
+
       LOG.errorf("Failed to fetch host keys from %s: %s", hostname, e.getMessage());
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity(new ErrorResponse("Failed to fetch host keys: " + e.getMessage())).build();
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(errorMessage)).build();
     }
   }
 

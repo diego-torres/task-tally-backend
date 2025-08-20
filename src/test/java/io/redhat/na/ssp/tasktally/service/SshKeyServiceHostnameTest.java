@@ -116,18 +116,47 @@ class SshKeyServiceHostnameTest {
     // Mock host key service to throw exception
     when(sshHostKeyService.fetchKnownHosts(TEST_HOSTNAME)).thenThrow(new IOException("Connection failed"));
 
+    // Mock secret writer
+    when(secretWriter.writeSshKey(anyString(), anyString(), any(), any(), any(), any()))
+        .thenReturn(new io.redhat.na.ssp.tasktally.secrets.SshSecretRefs("ref1", "ref2", null));
+
     SshKeyCreateRequest request = new SshKeyCreateRequest();
     request.name = "test-key";
     request.provider = "github";
     request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
     request.hostname = TEST_HOSTNAME;
 
-    // Should throw exception
+    // Should use hardcoded fallback for github.com instead of throwing exception
+    CredentialRef result = sshKeyService.create(TEST_USER_ID, request);
+
+    assertNotNull(result);
+    assertEquals("test-key", result.name);
+    assertEquals("github", result.provider);
+
+    // Verify host key service was called
+    verify(sshHostKeyService).fetchKnownHosts(TEST_HOSTNAME);
+
+    // Verify secret writer was called with hardcoded GitHub host keys
+    verify(secretWriter).writeSshKey(eq(TEST_USER_ID), eq("test-key"), any(), eq(null), eq(null), any());
+  }
+
+  @Test
+  void testCreateWithNonGithubHostnameFetchFailure() throws IOException {
+    // Mock host key service to throw exception
+    when(sshHostKeyService.fetchKnownHosts("gitlab.com")).thenThrow(new IOException("Connection failed"));
+
+    SshKeyCreateRequest request = new SshKeyCreateRequest();
+    request.name = "test-key";
+    request.provider = "gitlab";
+    request.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----";
+    request.hostname = "gitlab.com";
+
+    // Should throw exception for non-github hostnames
     IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
       sshKeyService.create(TEST_USER_ID, request);
     });
 
-    assertTrue(exception.getMessage().contains("Failed to fetch host keys from " + TEST_HOSTNAME));
+    assertTrue(exception.getMessage().contains("Failed to fetch host keys from gitlab.com"));
   }
 
   @Test
@@ -191,17 +220,45 @@ class SshKeyServiceHostnameTest {
     // Mock host key service to throw exception
     when(sshHostKeyService.fetchKnownHosts(TEST_HOSTNAME)).thenThrow(new IOException("Connection failed"));
 
+    // Mock secret writer
+    when(secretWriter.writeSshKey(anyString(), anyString(), any(), any(), any(), any()))
+        .thenReturn(new io.redhat.na.ssp.tasktally.secrets.SshSecretRefs("ref1", "ref2", null));
+
     SshKeyGenerateRequest request = new SshKeyGenerateRequest();
     request.name = "test-key";
     request.provider = "github";
     request.hostname = TEST_HOSTNAME;
 
-    // Should throw exception
+    // Should use hardcoded fallback for github.com instead of throwing exception
+    CredentialRef result = sshKeyService.generate(TEST_USER_ID, request);
+
+    assertNotNull(result);
+    assertEquals("test-key", result.name);
+    assertEquals("github", result.provider);
+
+    // Verify host key service was called
+    verify(sshHostKeyService).fetchKnownHosts(TEST_HOSTNAME);
+
+    // Verify secret writer was called with hardcoded GitHub host keys
+    verify(secretWriter).writeSshKey(eq(TEST_USER_ID), eq("test-key"), any(), any(), eq(null), any());
+  }
+
+  @Test
+  void testGenerateWithNonGithubHostnameFetchFailure() throws IOException {
+    // Mock host key service to throw exception
+    when(sshHostKeyService.fetchKnownHosts("gitlab.com")).thenThrow(new IOException("Connection failed"));
+
+    SshKeyGenerateRequest request = new SshKeyGenerateRequest();
+    request.name = "test-key";
+    request.provider = "gitlab";
+    request.hostname = "gitlab.com";
+
+    // Should throw exception for non-github hostnames
     IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
       sshKeyService.generate(TEST_USER_ID, request);
     });
 
-    assertTrue(exception.getMessage().contains("Failed to fetch host keys from " + TEST_HOSTNAME));
+    assertTrue(exception.getMessage().contains("Failed to fetch host keys from gitlab.com"));
   }
 
   @Test

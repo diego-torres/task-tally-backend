@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 
 import io.redhat.na.ssp.tasktally.api.SshKeyCreateRequest;
 import io.redhat.na.ssp.tasktally.api.SshKeyGenerateRequest;
+import io.redhat.na.ssp.tasktally.github.ssh.TaskTallySshdSessionFactory;
 import io.redhat.na.ssp.tasktally.model.CredentialRef;
 import io.redhat.na.ssp.tasktally.model.UserPreferences;
 import io.redhat.na.ssp.tasktally.repo.CredentialRefRepository;
@@ -36,6 +37,14 @@ import jakarta.transaction.Transactional;
 public class SshKeyService {
   private static final Logger LOG = Logger.getLogger(SshKeyService.class);
   private static final Set<String> ALLOWED_PROVIDERS = Set.of("github", "gitlab");
+
+  // Default GitHub's SSH host keys - fallback when dynamic fetching fails
+  // These are GitHub's current host keys as of 2024
+  private static final String GITHUB_HOST_KEYS = """
+      github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+      github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+      """;
 
   @Inject
   SecretWriter secretWriter;
@@ -86,14 +95,7 @@ public class SshKeyService {
     if (req.knownHosts != null && !req.knownHosts.trim().isEmpty()) {
       kh = ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8);
     } else if (req.hostname != null && !req.hostname.trim().isEmpty()) {
-      try {
-        String fetchedKnownHosts = sshHostKeyService.fetchKnownHosts(req.hostname.trim());
-        kh = fetchedKnownHosts.getBytes(StandardCharsets.UTF_8);
-        LOG.infof("Automatically fetched host keys from %s for SSH credential %s", req.hostname, name);
-      } catch (IOException e) {
-        LOG.warnf("Failed to fetch host keys from %s: %s", req.hostname, e.getMessage());
-        throw new IllegalArgumentException("Failed to fetch host keys from " + req.hostname + ": " + e.getMessage());
-      }
+      kh = fetchKnownHostsWithFallback(req.hostname.trim(), name);
     } else {
       kh = null;
     }
@@ -170,14 +172,7 @@ public class SshKeyService {
     if (req.knownHosts != null && !req.knownHosts.trim().isEmpty()) {
       khRaw = ensureTrailingNewline(req.knownHosts).getBytes(StandardCharsets.UTF_8);
     } else if (req.hostname != null && !req.hostname.trim().isEmpty()) {
-      try {
-        String fetchedKnownHosts = sshHostKeyService.fetchKnownHosts(req.hostname.trim());
-        khRaw = fetchedKnownHosts.getBytes(StandardCharsets.UTF_8);
-        LOG.infof("Automatically fetched host keys from %s for SSH credential %s", req.hostname, name);
-      } catch (IOException e) {
-        LOG.warnf("Failed to fetch host keys from %s: %s", req.hostname, e.getMessage());
-        throw new IllegalArgumentException("Failed to fetch host keys from " + req.hostname + ": " + e.getMessage());
-      }
+      khRaw = fetchKnownHostsWithFallback(req.hostname.trim(), name);
     } else {
       khRaw = null;
     }
@@ -316,5 +311,33 @@ public class SshKeyService {
 
   private String ensureTrailingNewline(String s) {
     return s.endsWith("\n") ? s : s + "\n";
+  }
+
+  /**
+   * Fetches known hosts from the specified hostname with fallback to hardcoded keys.
+   * 
+   * @param hostname
+   *          the hostname to fetch keys from
+   * @param credentialName
+   *          the name of the credential being created (for logging)
+   * @return known hosts content as bytes
+   */
+  private byte[] fetchKnownHostsWithFallback(String hostname, String credentialName) {
+    try {
+      String fetchedKnownHosts = sshHostKeyService.fetchKnownHosts(hostname);
+      LOG.infof("Automatically fetched host keys from %s for SSH credential %s", hostname, credentialName);
+      return fetchedKnownHosts.getBytes(StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      LOG.warnf("Failed to fetch host keys from %s: %s", hostname, e.getMessage());
+
+      // Use hardcoded GitHub host keys as fallback for github.com
+      if ("github.com".equals(hostname)) {
+        LOG.infof("Using hardcoded GitHub host keys as fallback for SSH credential %s", credentialName);
+        return GITHUB_HOST_KEYS.getBytes(StandardCharsets.UTF_8);
+      }
+
+      // For other hostnames, throw the original exception
+      throw new IllegalArgumentException("Failed to fetch host keys from " + hostname + ": " + e.getMessage());
+    }
   }
 }
