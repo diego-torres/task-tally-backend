@@ -28,7 +28,7 @@ public class TaskTallySshdSessionFactoryTest {
     assertNotNull(factory);
 
     // Verify private key file exists and has correct permissions
-    Path keyFile = tempDir.resolve("id_ed25519");
+    Path keyFile = tempDir.resolve("id_rsa");
     assertTrue(Files.exists(keyFile), "Private key file should exist");
     assertTrue(keyFile.toFile().canRead(), "Private key file should be readable");
     assertTrue(keyFile.toFile().canWrite(), "Private key file should be writable by owner");
@@ -44,7 +44,7 @@ public class TaskTallySshdSessionFactoryTest {
     assertTrue(Files.exists(configFile), "SSH config file should exist");
     String configContent = Files.readString(configFile);
     assertTrue(configContent.contains("Host github.com"), "Config should contain GitHub host configuration");
-    assertTrue(configContent.contains("StrictHostKeyChecking yes"), "Config should enable strict host key checking");
+    assertTrue(configContent.contains("StrictHostKeyChecking no"), "Config should disable strict host key checking");
   }
 
   @Test

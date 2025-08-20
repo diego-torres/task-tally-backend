@@ -20,15 +20,15 @@ public class KubernetesSecretWriterTest {
     SshSecretRefs refs = writer.writeSshKey("u1", "My Key", priv, pub, null, kh);
 
     assertNotNull(refs.privateKeyRef());
-    Path privPath = base.resolve("tasktally-ssh-u1-my-key").resolve("id_ed25519");
+    Path privPath = base.resolve("tasktally-ssh-u1-my-key").resolve("id_rsa");
     assertTrue(Files.exists(privPath));
 
     KubernetesSecretResolver resolver = new KubernetesSecretResolver(base);
     byte[] resolved = resolver.resolveBinary(refs.privateKeyRef());
     assertArrayEquals(priv, resolved);
-    assertEquals("k8s:secret/tasktally-ssh-u1-my-key#id_ed25519", refs.privateKeyRef());
+    assertEquals("k8s:secret/tasktally-ssh-u1-my-key#id_rsa", refs.privateKeyRef());
     assertEquals("k8s:secret/tasktally-ssh-u1-my-key#known_hosts", refs.knownHostsRef());
-    String pubFile = Files.readString(base.resolve("tasktally-ssh-u1-my-key").resolve("id_ed25519.pub"));
+    String pubFile = Files.readString(base.resolve("tasktally-ssh-u1-my-key").resolve("id_rsa.pub"));
     assertTrue(pubFile.endsWith("\n"));
     String khFile = Files.readString(base.resolve("tasktally-ssh-u1-my-key").resolve("known_hosts"));
     assertTrue(khFile.endsWith("\n"));

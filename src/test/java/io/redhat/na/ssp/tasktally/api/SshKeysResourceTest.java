@@ -120,7 +120,7 @@ public class SshKeysResourceTest {
     String uniqueName = "agent-key-" + java.util.UUID.randomUUID();
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
       pub.set(inv.getArgument(3));
-      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_ed25519", null, null);
+      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_rsa", null, null);
     });
     when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
 
@@ -129,7 +129,7 @@ public class SshKeysResourceTest {
         .body("name", equalTo(uniqueName)).body("provider", equalTo("github"));
 
     given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().statusCode(200)
-        .body("publicKey", startsWith("ssh-ed25519 ")).body("fingerprintSha256", not(emptyOrNullString()))
+        .body("publicKey", startsWith("ssh-rsa ")).body("fingerprintSha256", not(emptyOrNullString()))
         .body("name", equalTo(uniqueName)).body("provider", equalTo("github"));
   }
 
@@ -155,7 +155,7 @@ public class SshKeysResourceTest {
     String uniqueName = "api-format-test-" + java.util.UUID.randomUUID();
     when(writer.writeSshKey(any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
       pub.set(inv.getArgument(3));
-      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_ed25519", null, null);
+      return new SshSecretRefs("k8s:secret/" + uniqueName + "#id_rsa", null, null);
     });
     when(resolver.resolveBytes(anyString())).thenAnswer(inv -> pub.get());
 
@@ -165,7 +165,7 @@ public class SshKeysResourceTest {
 
     // Test the public key endpoint response
     given().get("/api/users/u1/ssh-keys/" + uniqueName + "/public").then().statusCode(200)
-        .body("publicKey", startsWith("ssh-ed25519 ")).body("publicKey", not(emptyOrNullString()))
+        .body("publicKey", startsWith("ssh-rsa ")).body("publicKey", not(emptyOrNullString()))
         .body("fingerprintSha256", not(emptyOrNullString())).body("name", equalTo(uniqueName))
         .body("provider", equalTo("github"));
 
@@ -179,10 +179,10 @@ public class SshKeysResourceTest {
     System.out.println("Public Key: '" + publicKey + "'");
 
     // Verify the key format is correct for GitHub
-    assertTrue(publicKey.startsWith("ssh-ed25519 "), "Public key should start with 'ssh-ed25519 '");
+    assertTrue(publicKey.startsWith("ssh-rsa "), "Public key should start with 'ssh-rsa '");
     String[] parts = publicKey.split(" ");
     assertEquals(3, parts.length, "Public key should have exactly 3 parts");
-    assertEquals("ssh-ed25519", parts[0], "First part should be 'ssh-ed25519'");
+    assertEquals("ssh-rsa", parts[0], "First part should be 'ssh-rsa'");
     assertTrue(parts[1].length() > 0, "Key part should not be empty");
     assertEquals("test@example.com", parts[2], "Comment should match");
 

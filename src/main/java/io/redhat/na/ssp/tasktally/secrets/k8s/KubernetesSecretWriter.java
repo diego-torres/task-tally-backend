@@ -32,9 +32,9 @@ public class KubernetesSecretWriter implements SecretWriter {
     Path dir = basePath.resolve(secretName);
     try {
       Files.createDirectories(dir);
-      Files.write(dir.resolve("id_ed25519"), privateKeyPem);
+      Files.write(dir.resolve("id_rsa"), privateKeyPem);
       if (publicKeyOpenSsh != null) {
-        Files.write(dir.resolve("id_ed25519.pub"), ensureNewline(publicKeyOpenSsh));
+        Files.write(dir.resolve("id_rsa.pub"), ensureNewline(publicKeyOpenSsh));
       }
       if (passphrase != null) {
         Files.writeString(dir.resolve("passphrase"), new String(passphrase), StandardCharsets.UTF_8);
@@ -45,7 +45,7 @@ public class KubernetesSecretWriter implements SecretWriter {
     } catch (IOException e) {
       throw new RuntimeException("Failed to write secret", e);
     }
-    String privateRef = "k8s:secret/" + secretName + "#id_ed25519";
+    String privateRef = "k8s:secret/" + secretName + "#id_rsa";
     String knownHostsRef = knownHosts != null ? "k8s:secret/" + secretName + "#known_hosts" : null;
     String passphraseRef = passphrase != null ? "k8s:secret/" + secretName + "#passphrase" : null;
     return new SshSecretRefs(privateRef, knownHostsRef, passphraseRef);

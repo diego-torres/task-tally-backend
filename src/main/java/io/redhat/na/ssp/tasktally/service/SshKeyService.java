@@ -184,7 +184,8 @@ public class SshKeyService {
     }
 
     try {
-      KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
+      KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+      kpg.initialize(2048); // Use 2048-bit RSA keys
       KeyPair kp = kpg.generateKeyPair();
       byte[] privatePem = writePkcs8Pem(kp.getPrivate());
 
@@ -218,7 +219,7 @@ public class SshKeyService {
       throw new IllegalStateException("missing secret ref");
     }
     if (privRef.startsWith("k8s:secret/")) {
-      String pubRef = privRef.replaceFirst("#id_ed25519", "#id_ed25519.pub");
+      String pubRef = privRef.replaceFirst("#id_rsa", "#id_rsa.pub");
       try {
         byte[] pub = secretResolver.resolveBytes(pubRef);
         if (pub != null && pub.length > 0) {
@@ -229,7 +230,7 @@ public class SshKeyService {
       }
       try {
         byte[] priv = secretResolver.resolveBytes(privRef);
-        NamedResource named = NamedResource.ofName("id_ed25519");
+        NamedResource named = NamedResource.ofName("id_rsa");
         FilePasswordProvider fpp = cred.passphraseRef != null
             ? FilePasswordProvider.of(secretResolver.resolve(cred.passphraseRef))
             : FilePasswordProvider.EMPTY;
@@ -272,34 +273,48 @@ public class SshKeyService {
 
   private String buildOpenSshPublic(java.security.PublicKey pub, String userId, String comment) {
     String c = (comment == null || comment.isBlank()) ? "task-tally@" + userId : comment.trim();
-    String keyType = "ssh-ed25519";
+    String keyType = "ssh-rsa";
 
     // Convert to OpenSSH wire format
     byte[] sshKeyBytes;
-    if (pub instanceof java.security.interfaces.EdECPublicKey) {
-      // For Ed25519, we need to extract the raw key bytes and format them for SSH
-      java.security.interfaces.EdECPublicKey edKey = (java.security.interfaces.EdECPublicKey) pub;
-      java.security.spec.EdECPoint point = edKey.getPoint();
-      byte[] rawKey = point.getY().toByteArray();
+    if (pub instanceof java.security.interfaces.RSAPublicKey) {
+      // For RSA, we need to extract the modulus and exponent and format them for SSH
+      java.security.interfaces.RSAPublicKey rsaKey = (java.security.interfaces.RSAPublicKey) pub;
+      java.math.BigInteger modulus = rsaKey.getModulus();
+      java.math.BigInteger exponent = rsaKey.getPublicExponent();
 
-      // SSH wire format: string "ssh-ed25519" + string key_data
+      // Convert to byte arrays
+      byte[] modulusBytes = modulus.toByteArray();
+      byte[] exponentBytes = exponent.toByteArray();
+
+      // SSH wire format: string "ssh-rsa" + string e + string n
       byte[] keyTypeBytes = keyType.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-      sshKeyBytes = new byte[4 + keyTypeBytes.length + 4 + rawKey.length];
+      sshKeyBytes = new byte[4 + keyTypeBytes.length + 4 + exponentBytes.length + 4 + modulusBytes.length];
+
+      int offset = 0;
 
       // Write key type length and key type
-      sshKeyBytes[0] = (byte) ((keyTypeBytes.length >> 24) & 0xFF);
-      sshKeyBytes[1] = (byte) ((keyTypeBytes.length >> 16) & 0xFF);
-      sshKeyBytes[2] = (byte) ((keyTypeBytes.length >> 8) & 0xFF);
-      sshKeyBytes[3] = (byte) (keyTypeBytes.length & 0xFF);
-      System.arraycopy(keyTypeBytes, 0, sshKeyBytes, 4, keyTypeBytes.length);
+      sshKeyBytes[offset++] = (byte) ((keyTypeBytes.length >> 24) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((keyTypeBytes.length >> 16) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((keyTypeBytes.length >> 8) & 0xFF);
+      sshKeyBytes[offset++] = (byte) (keyTypeBytes.length & 0xFF);
+      System.arraycopy(keyTypeBytes, 0, sshKeyBytes, offset, keyTypeBytes.length);
+      offset += keyTypeBytes.length;
 
-      // Write key data length and key data
-      int keyDataOffset = 4 + keyTypeBytes.length;
-      sshKeyBytes[keyDataOffset] = (byte) ((rawKey.length >> 24) & 0xFF);
-      sshKeyBytes[keyDataOffset + 1] = (byte) ((rawKey.length >> 16) & 0xFF);
-      sshKeyBytes[keyDataOffset + 2] = (byte) ((rawKey.length >> 8) & 0xFF);
-      sshKeyBytes[keyDataOffset + 3] = (byte) (rawKey.length & 0xFF);
-      System.arraycopy(rawKey, 0, sshKeyBytes, keyDataOffset + 4, rawKey.length);
+      // Write exponent length and exponent
+      sshKeyBytes[offset++] = (byte) ((exponentBytes.length >> 24) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((exponentBytes.length >> 16) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((exponentBytes.length >> 8) & 0xFF);
+      sshKeyBytes[offset++] = (byte) (exponentBytes.length & 0xFF);
+      System.arraycopy(exponentBytes, 0, sshKeyBytes, offset, exponentBytes.length);
+      offset += exponentBytes.length;
+
+      // Write modulus length and modulus
+      sshKeyBytes[offset++] = (byte) ((modulusBytes.length >> 24) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((modulusBytes.length >> 16) & 0xFF);
+      sshKeyBytes[offset++] = (byte) ((modulusBytes.length >> 8) & 0xFF);
+      sshKeyBytes[offset++] = (byte) (modulusBytes.length & 0xFF);
+      System.arraycopy(modulusBytes, 0, sshKeyBytes, offset, modulusBytes.length);
     } else {
       // Fallback for other key types
       sshKeyBytes = pub.getEncoded();

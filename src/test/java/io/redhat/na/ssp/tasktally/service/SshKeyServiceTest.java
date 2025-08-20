@@ -80,7 +80,7 @@ public class SshKeyServiceTest {
     req.name = "k1";
     req.provider = "github";
     req.privateKeyPem = "-----BEGIN OPENSSH TEST KEY-----\nAAA\n-----END OPENSSH TEST KEY-----\n";
-    req.knownHosts = "github.com ssh-ed25519 AAAA\n";
+    req.knownHosts = "github.com ssh-rsa AAAA\n";
     CredentialRef cred = service.create(TEST_USER_ID, req);
     assertEquals("ref1", cred.secretRef);
     assertEquals(1, service.list(TEST_USER_ID).size());
@@ -105,7 +105,7 @@ public class SshKeyServiceTest {
     CredentialRef cred = service.generate(TEST_USER_ID, req);
     assertNotNull(cred);
     String pk = service.getPublicKey(TEST_USER_ID, "unique_no_passphrase");
-    assertTrue(pk.startsWith("ssh-ed25519 "));
+    assertTrue(pk.startsWith("ssh-rsa "));
     String privStr = new String(priv.get(), StandardCharsets.UTF_8);
     assertTrue(privStr.startsWith("-----BEGIN PRIVATE KEY-----"));
   }
@@ -174,13 +174,13 @@ public class SshKeyServiceTest {
     String pk = service.getPublicKey(TEST_USER_ID, "format-test");
 
     // Verify the format matches OpenSSH public key format
-    assertTrue(pk.startsWith("ssh-ed25519 "), "Public key should start with 'ssh-ed25519 '");
+    assertTrue(pk.startsWith("ssh-rsa "), "Public key should start with 'ssh-rsa '");
     assertTrue(pk.contains(" "), "Public key should contain spaces separating parts");
 
     // Split the key into parts
     String[] parts = pk.split(" ");
     assertEquals(3, parts.length, "Public key should have exactly 3 parts: type, key, comment");
-    assertEquals("ssh-ed25519", parts[0], "First part should be 'ssh-ed25519'");
+    assertEquals("ssh-rsa", parts[0], "First part should be 'ssh-rsa'");
     assertTrue(parts[1].length() > 0, "Key part should not be empty");
     assertEquals("test@example.com", parts[2], "Comment should match the provided comment");
 
