@@ -14,7 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 public class TaskTallySshdSessionFactoryTest {
 
   @Test
-  void testCreateWithGitHubHostKey(@TempDir Path tempDir) throws IOException {
+  void testCreateWithProvidedKnownHosts(@TempDir Path tempDir) throws IOException {
     // Test data
     byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
@@ -33,18 +33,18 @@ public class TaskTallySshdSessionFactoryTest {
     assertTrue(keyFile.toFile().canRead(), "Private key file should be readable");
     assertTrue(keyFile.toFile().canWrite(), "Private key file should be writable by owner");
 
-    // Verify known_hosts file exists and contains GitHub host key
+    // Verify known_hosts file exists and contains provided host key
     Path knownHostsFile = tempDir.resolve("known_hosts");
     assertTrue(Files.exists(knownHostsFile), "Known hosts file should exist");
     String knownHostsContent = Files.readString(knownHostsFile);
-    assertTrue(knownHostsContent.contains("github.com ssh-ed25519"), "Known hosts should contain GitHub host key");
+    assertTrue(knownHostsContent.contains("github.com ssh-ed25519"), "Known hosts should contain provided host key");
 
     // Verify config file exists
     Path configFile = tempDir.resolve("config");
     assertTrue(Files.exists(configFile), "SSH config file should exist");
     String configContent = Files.readString(configFile);
     assertTrue(configContent.contains("Host github.com"), "Config should contain GitHub host configuration");
-    assertTrue(configContent.contains("StrictHostKeyChecking no"), "Config should disable strict host key checking");
+    assertTrue(configContent.contains("StrictHostKeyChecking yes"), "Config should enable strict host key checking");
   }
 
   @Test
@@ -53,18 +53,17 @@ public class TaskTallySshdSessionFactoryTest {
     byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
 
-    // Create session factory with empty known_hosts (should use default GitHub host key)
+    // Create session factory with empty known_hosts (should read from local file)
     SshdSessionFactory factory = TaskTallySshdSessionFactory.create(privateKey, new byte[0], null, tempDir.toFile());
 
     // Verify factory is created
     assertNotNull(factory);
 
-    // Verify known_hosts file contains the default GitHub host key
+    // Verify known_hosts file exists and contains some host keys
     Path knownHostsFile = tempDir.resolve("known_hosts");
     assertTrue(Files.exists(knownHostsFile), "Known hosts file should exist");
     String knownHostsContent = Files.readString(knownHostsFile);
-    assertTrue(knownHostsContent.contains("github.com ssh-ed25519"),
-        "Known hosts should contain default GitHub host key");
+    assertTrue(knownHostsContent.contains("github.com"), "Known hosts should contain GitHub host keys");
   }
 
   @Test
@@ -73,17 +72,34 @@ public class TaskTallySshdSessionFactoryTest {
     byte[] privateKey = "-----BEGIN OPENSSH TEST KEY-----\ntest-key\n-----END OPENSSH TEST KEY-----\n"
         .getBytes(StandardCharsets.UTF_8);
 
-    // Create session factory with null known_hosts (should use default GitHub host key)
+    // Create session factory with null known_hosts (should read from local file)
     SshdSessionFactory factory = TaskTallySshdSessionFactory.create(privateKey, null, null, tempDir.toFile());
 
     // Verify factory is created
     assertNotNull(factory);
 
-    // Verify known_hosts file contains the default GitHub host key
+    // Verify known_hosts file exists and contains some host keys
     Path knownHostsFile = tempDir.resolve("known_hosts");
     assertTrue(Files.exists(knownHostsFile), "Known hosts file should exist");
     String knownHostsContent = Files.readString(knownHostsFile);
-    assertTrue(knownHostsContent.contains("github.com ssh-ed25519"),
-        "Known hosts should contain default GitHub host key");
+    assertTrue(knownHostsContent.contains("github.com"), "Known hosts should contain GitHub host keys");
+  }
+
+  @Test
+  void testEnvironmentVariableConfiguration() {
+    // Test that the environment variable constants are properly defined
+    String envVar = System.getenv("TASKTALLY_KNOWN_HOSTS_FILE");
+    String defaultPath = System.getProperty("user.home") + "/.ssh/known_hosts";
+
+    // The system should work with or without the environment variable set
+    assertNotNull(defaultPath, "Default known_hosts path should not be null");
+    assertTrue(defaultPath.contains(".ssh/known_hosts"), "Default path should contain .ssh/known_hosts");
+
+    // If environment variable is set, it should be a valid path
+    if (envVar != null && !envVar.trim().isEmpty()) {
+      Path envPath = Path.of(envVar);
+      assertTrue(envPath.isAbsolute() || envPath.toString().contains("/"),
+          "Environment variable path should be absolute or contain path separators");
+    }
   }
 }

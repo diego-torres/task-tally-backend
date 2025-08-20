@@ -1,6 +1,9 @@
 package io.redhat.na.ssp.tasktally.github.ssh;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder;
@@ -15,13 +18,34 @@ public final class TaskTallySshdSessionFactory {
   private TaskTallySshdSessionFactory() {
   }
 
-  // Default GitHub's SSH host keys - fallback when no known_hosts provided
-  // These are GitHub's current host keys as of 2024
-  private static final String GITHUB_HOST_KEYS = """
-      github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==
-      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-      github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
-      """;
+  // Environment variable for known_hosts file location
+  private static final String KNOWN_HOSTS_PATH = "KNOWN_HOSTS_FILE";
+  private static final String DEFAULT_KNOWN_HOSTS_PATH = System.getProperty("user.home") + "/.ssh/known_hosts";
+
+  /**
+   * Reads the known_hosts file from the configured location.
+   * 
+   * @return the content of the known_hosts file
+   * @throws IOException
+   *           if the file cannot be read
+   */
+  private static String readKnownHostsFile() throws IOException {
+    String knownHostsPath = System.getenv(KNOWN_HOSTS_PATH);
+    if (knownHostsPath == null || knownHostsPath.trim().isEmpty()) {
+      knownHostsPath = DEFAULT_KNOWN_HOSTS_PATH;
+    }
+
+    Path path = Path.of(knownHostsPath);
+    LOG.debugf("Reading known_hosts from: %s", path);
+
+    if (!Files.exists(path)) {
+      throw new IOException("Known hosts file not found at " + path);
+    }
+
+    String content = Files.readString(path, StandardCharsets.UTF_8);
+    LOG.debugf("Successfully read known_hosts file with %d characters", content.length());
+    return content;
+  }
 
   public static SshdSessionFactory create(byte[] privateKey, byte[] knownHosts, char[] passphrase, java.io.File sshDir)
       throws IOException {
@@ -42,10 +66,11 @@ public final class TaskTallySshdSessionFactory {
     // Write known_hosts to temp dir
     java.nio.file.Path knownHostsFile = tempDir.resolve("known_hosts");
 
-    // If knownHosts is null or empty, use GitHub's host keys as default
+    // If knownHosts is null or empty, read from local known_hosts file
     byte[] hostsToWrite;
     if (knownHosts == null || knownHosts.length == 0) {
-      hostsToWrite = GITHUB_HOST_KEYS.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      String localKnownHosts = readKnownHostsFile();
+      hostsToWrite = localKnownHosts.getBytes(StandardCharsets.UTF_8);
     } else {
       // Use the provided known_hosts as-is, since they should already be complete
       hostsToWrite = knownHosts;
@@ -57,19 +82,15 @@ public final class TaskTallySshdSessionFactory {
     knownHostsFile.toFile().setReadable(true, true);
     knownHostsFile.toFile().setWritable(true, true);
 
-    LOG.debugf("Created known_hosts file with content: %s",
-        new String(hostsToWrite, java.nio.charset.StandardCharsets.UTF_8));
+    LOG.debugf("Created known_hosts file with content: %s", new String(hostsToWrite, StandardCharsets.UTF_8));
 
-    // Create SSH config file with more permissive host key checking
-    // TODO: This is a temporary fix. We should implement a proper host key verifier
-    // that validates against the known_hosts file instead of disabling strict checking.
-    // For now, using 'no' to allow the connection to work while we investigate the
-    // proper way to handle host key validation with JGit's SSH client.
+    // Create SSH config file with strict host key checking enabled
+    // This enables proper host key verification against the known_hosts file
     java.nio.file.Path configFile = tempDir.resolve("config");
     String configContent = "Host github.com\n" + "  HostName github.com\n" + "  User git\n" + "  IdentityFile "
-        + keyFile.toString() + "\n" + "  StrictHostKeyChecking no\n" + "  UserKnownHostsFile "
+        + keyFile.toString() + "\n" + "  StrictHostKeyChecking yes\n" + "  UserKnownHostsFile "
         + knownHostsFile.toString() + "\n" + "  LogLevel DEBUG\n";
-    java.nio.file.Files.write(configFile, configContent.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+    java.nio.file.Files.write(configFile, configContent.getBytes(StandardCharsets.UTF_8),
         java.nio.file.StandardOpenOption.CREATE);
 
     LOG.debugf("Created SSH config file with content: %s", configContent);
@@ -78,7 +99,7 @@ public final class TaskTallySshdSessionFactory {
     builder.setHomeDirectory(tempDir.toFile());
     builder.setSshDirectory(tempDir.toFile());
 
-    LOG.debug("SSH session factory created successfully");
+    LOG.debug("SSH session factory created successfully with proper host key verification");
     return builder.build(null);
   }
 }

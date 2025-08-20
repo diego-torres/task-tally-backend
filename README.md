@@ -196,6 +196,41 @@ The automatic host key fetching feature:
 - **Works with any SSH server** that supports the standard SSH protocol
 - **Is secure** - only reads host keys, never attempts authentication
 
+### Local Known Hosts File Support
+
+The system can read host keys from a local `known_hosts` file instead of using hardcoded keys:
+
+#### Environment Variable Configuration
+
+Set the `TASKTALLY_KNOWN_HOSTS_FILE` environment variable to specify a custom known_hosts file location:
+
+```bash
+# Use a custom known_hosts file
+export TASKTALLY_KNOWN_HOSTS_FILE="/path/to/custom/known_hosts"
+
+# Or use the default location (~/.ssh/known_hosts)
+# No environment variable needed
+```
+
+#### Default Behavior
+
+- **Default location**: `~/.ssh/known_hosts`
+- **Required**: The known_hosts file must exist and be readable
+- **No fallback**: The system no longer uses hardcoded host keys as fallback
+- **Logging**: The system logs which file it's reading from and any issues encountered
+
+#### Example Usage
+
+```bash
+# Set custom known_hosts file
+export TASKTALLY_KNOWN_HOSTS_FILE="/opt/tasktally/known_hosts"
+
+# Start the application
+./mvnw quarkus:dev
+```
+
+The system will automatically read from the specified file and use those host keys for SSH connections.
+
 ### Supported Hosts
 
 The system works with any SSH server, but has been tested with:
