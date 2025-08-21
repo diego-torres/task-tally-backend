@@ -40,9 +40,18 @@ public class OutcomeService {
     // Get credential for Git operations
     CredentialRef credential = getCredentialForTemplate(userId, template);
 
-    List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
-    LOG.infof("Found %d outcomes for template %d for user %s", outcomes.size(), templateId, userId);
-    return outcomes;
+    try {
+      List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
+      LOG.infof("Found %d outcomes for template %d for user %s", outcomes.size(), templateId, userId);
+      return outcomes;
+    } catch (RuntimeException e) {
+      // Handle SSH key resolution failures gracefully
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.warnf("SSH key secret not found for template %d, returning empty list", templateId);
+        return new ArrayList<>();
+      }
+      throw e;
+    }
   }
 
   @Transactional
@@ -55,17 +64,26 @@ public class OutcomeService {
     // Get credential for Git operations
     CredentialRef credential = getCredentialForTemplate(userId, template);
 
-    // Read existing outcomes
-    List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
+    try {
+      // Read existing outcomes
+      List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
 
-    // Add new outcome
-    outcomes.add(outcome);
+      // Add new outcome
+      outcomes.add(outcome);
 
-    // Write back to Git
-    gitYamlService.writeOutcomes(template, outcomes, credential);
+      // Write back to Git
+      gitYamlService.writeOutcomes(template, outcomes, credential);
 
-    LOG.infof("Created outcome for template %d for user %s", templateId, userId);
-    return outcome;
+      LOG.infof("Created outcome for template %d for user %s", templateId, userId);
+      return outcome;
+    } catch (RuntimeException e) {
+      // Handle SSH key resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.errorf("SSH key secret not found for template %d, cannot create outcome", templateId);
+        throw new RuntimeException("SSH key secret not found. Cannot create outcome", e);
+      }
+      throw e;
+    }
   }
 
   @Transactional
@@ -78,21 +96,30 @@ public class OutcomeService {
     // Get credential for Git operations
     CredentialRef credential = getCredentialForTemplate(userId, template);
 
-    // Read existing outcomes
-    List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
+    try {
+      // Read existing outcomes
+      List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
 
-    // Find and update the outcome
-    if (outcomeId >= 0 && outcomeId < outcomes.size()) {
-      outcomes.set(outcomeId.intValue(), incoming);
+      // Find and update the outcome
+      if (outcomeId >= 0 && outcomeId < outcomes.size()) {
+        outcomes.set(outcomeId.intValue(), incoming);
 
-      // Write back to Git
-      gitYamlService.writeOutcomes(template, outcomes, credential);
+        // Write back to Git
+        gitYamlService.writeOutcomes(template, outcomes, credential);
 
-      LOG.infof("Updated outcome %d for template %d for user %s", outcomeId, templateId, userId);
-      return incoming;
-    } else {
-      LOG.errorf("Outcome %d for template %d for user %s not found", outcomeId, templateId, userId);
-      throw new NotFoundException();
+        LOG.infof("Updated outcome %d for template %d for user %s", outcomeId, templateId, userId);
+        return incoming;
+      } else {
+        LOG.errorf("Outcome %d for template %d for user %s not found", outcomeId, templateId, userId);
+        throw new NotFoundException();
+      }
+    } catch (RuntimeException e) {
+      // Handle SSH key resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.errorf("SSH key secret not found for template %d, cannot update outcome", templateId);
+        throw new RuntimeException("SSH key secret not found. Cannot update outcome", e);
+      }
+      throw e;
     }
   }
 
@@ -106,20 +133,29 @@ public class OutcomeService {
     // Get credential for Git operations
     CredentialRef credential = getCredentialForTemplate(userId, template);
 
-    // Read existing outcomes
-    List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
+    try {
+      // Read existing outcomes
+      List<Outcome> outcomes = gitYamlService.readOutcomes(template, credential);
 
-    // Remove the outcome
-    if (outcomeId >= 0 && outcomeId < outcomes.size()) {
-      outcomes.remove(outcomeId.intValue());
+      // Remove the outcome
+      if (outcomeId >= 0 && outcomeId < outcomes.size()) {
+        outcomes.remove(outcomeId.intValue());
 
-      // Write back to Git
-      gitYamlService.writeOutcomes(template, outcomes, credential);
+        // Write back to Git
+        gitYamlService.writeOutcomes(template, outcomes, credential);
 
-      LOG.infof("Deleted outcome %d for template %d for user %s", outcomeId, templateId, userId);
-    } else {
-      LOG.errorf("Outcome %d for template %d for user %s not found", outcomeId, templateId, userId);
-      throw new NotFoundException();
+        LOG.infof("Deleted outcome %d for template %d for user %s", outcomeId, templateId, userId);
+      } else {
+        LOG.errorf("Outcome %d for template %d for user %s not found", outcomeId, templateId, userId);
+        throw new NotFoundException();
+      }
+    } catch (RuntimeException e) {
+      // Handle SSH key resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.errorf("SSH key secret not found for template %d, cannot delete outcome", templateId);
+        throw new RuntimeException("SSH key secret not found. Cannot delete outcome", e);
+      }
+      throw e;
     }
   }
 
@@ -133,10 +169,19 @@ public class OutcomeService {
     // Get credential for Git operations
     CredentialRef credential = getCredentialForTemplate(userId, template);
 
-    // Write empty outcomes list to Git
-    gitYamlService.writeOutcomes(template, new ArrayList<>(), credential);
+    try {
+      // Write empty outcomes list to Git
+      gitYamlService.writeOutcomes(template, new ArrayList<>(), credential);
 
-    LOG.infof("Deleted all outcomes for template %d for user %s", templateId, userId);
+      LOG.infof("Deleted all outcomes for template %d for user %s", templateId, userId);
+    } catch (RuntimeException e) {
+      // Handle SSH key resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.errorf("SSH key secret not found for template %d, cannot delete all outcomes", templateId);
+        throw new RuntimeException("SSH key secret not found. Cannot delete all outcomes", e);
+      }
+      throw e;
+    }
   }
 
   private Template verifyTemplateOwnership(String userId, Long templateId) {

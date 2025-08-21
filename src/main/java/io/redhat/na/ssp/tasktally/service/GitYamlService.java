@@ -79,6 +79,15 @@ public class GitYamlService {
       LOG.infof("Read %d outcomes from Git repository %s", outcomes.size(), template.repositoryUrl);
       return outcomes;
 
+    } catch (IllegalArgumentException e) {
+      // Handle SSH key secret resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.warnf("SSH key secret not found for repository %s, returning empty list. Error: %s", template.repositoryUrl,
+            e.getMessage());
+        return new ArrayList<>();
+      }
+      LOG.errorf(e, "Failed to read outcomes from Git repository %s", template.repositoryUrl);
+      throw new RuntimeException("Failed to read outcomes from Git repository", e);
     } catch (Exception e) {
       LOG.errorf(e, "Failed to read outcomes from Git repository %s", template.repositoryUrl);
       throw new RuntimeException("Failed to read outcomes from Git repository", e);
@@ -116,6 +125,15 @@ public class GitYamlService {
 
       LOG.infof("Successfully wrote %d outcomes to Git repository %s", outcomes.size(), template.repositoryUrl);
 
+    } catch (IllegalArgumentException e) {
+      // Handle SSH key secret resolution failures
+      if (e.getMessage() != null && e.getMessage().contains("Secret not found:")) {
+        LOG.errorf("SSH key secret not found for repository %s. Cannot write outcomes. Error: %s",
+            template.repositoryUrl, e.getMessage());
+        throw new RuntimeException("SSH key secret not found. Cannot write outcomes to Git repository", e);
+      }
+      LOG.errorf(e, "Failed to write outcomes to Git repository %s", template.repositoryUrl);
+      throw new RuntimeException("Failed to write outcomes to Git repository", e);
     } catch (Exception e) {
       LOG.errorf(e, "Failed to write outcomes to Git repository %s", template.repositoryUrl);
       throw new RuntimeException("Failed to write outcomes to Git repository", e);
